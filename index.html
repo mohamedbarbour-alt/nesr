@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.2 — v11.1 + قفل دفعات الموظف + صلاحية جرد/تكعيب المخزون مع إخفاء المصانع والموردين عن الموظف (يوليو 2026) -->
+<!-- v11.4 — إدارة المستخدمين من داخل البرنامج (إضافة/حذف/تغيير أدوار) عبر وظيفة سحابية admin-users (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -226,17 +226,17 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <aside class="sb" id="main-sb">
   <div class="sb-logo"><span>🦅</span><h1>النسر الذهبي</h1></div>
   <nav class="sb-nav">
-    <button class="nb on" onclick="go('p-dash',this)">📊 لوحة التحكم</button>
-    <button class="nb" onclick="go('p-upload',this)">📤 رفع Excel / PDF</button>
-    <button class="nb" onclick="go('p-manual',this)">✏️ إدخال يدوي</button>
+    <button class="nb adm on" onclick="go('p-dash',this)">📊 لوحة التحكم</button>
+    <button class="nb adm" onclick="go('p-upload',this)">📤 رفع Excel / PDF</button>
+    <button class="nb adm" onclick="go('p-manual',this)">✏️ إدخال يدوي</button>
     <button class="nb" onclick="go('p-inv',this)">📦 المخزون</button>
-    <button class="nb" onclick="go('p-pl',this)">📋 Packing Lists</button>
+    <button class="nb adm" onclick="go('p-pl',this)">📋 Packing Lists</button>
     <button class="nb" onclick="go('p-sale',this)">🧾 المبيعات</button>
     <button class="nb adm" onclick="go('p-cust',this)">👥 العملاء</button>
-    <button class="nb" onclick="go('p-sup',this)">🏭 الموردين</button>
+    <button class="nb adm" onclick="go('p-sup',this)">🏭 الموردين</button>
     <button class="nb adm" onclick="go('p-sum',this)">📊 الملخصات</button>
     <button class="nb adm" onclick="go('p-reports',this)">📈 تقارير</button>
-    <button class="nb" onclick="go('p-cash',this)">💵 اليومية</button>
+    <button class="nb adm" onclick="go('p-cash',this)">💵 اليومية</button>
     <button class="nb" onclick="go('p-workers',this)">👷 العمال والمصارف</button>
     <button class="nb adm" onclick="go('p-settings',this)">⚙️ الإعدادات</button>
   </nav>
@@ -1228,16 +1228,24 @@ function _forceRelogin(msg){
 }
 // fetch ذكي: بيجدد الجلسة قبل انتهائها وبيعيد المحاولة مرة لو اترفضت
 function _authFetch(url,opts){
+  // بيحافظ على هيدرز الطلب الأصلية (Content-Type / Prefer) ويحقن التوكن بس — ويجدده لو انتهى
   opts=opts||{};
-  var s=authGet();
-  var pre=(s&&s.exp&&Date.now()>s.exp-60000)?authRefresh().catch(function(){}):Promise.resolve();
+  var baseHeaders=opts.headers||{};
+  function _inject(){
+    var s=authGet();
+    baseHeaders['apikey']=SUPA_KEY;
+    baseHeaders['Authorization']='Bearer '+(s&&s.access_token?s.access_token:SUPA_KEY);
+    opts.headers=baseHeaders;
+  }
+  var s0=authGet();
+  var pre=(s0&&s0.exp&&Date.now()>s0.exp-60000)?authRefresh().catch(function(){}):Promise.resolve();
   return pre.then(function(){
-    opts.headers=authHeaders(opts._json,opts._prefer);
+    _inject();
     return fetch(url,opts);
   }).then(function(r){
     if(r.status===401||r.status===403){
       return authRefresh().then(function(){
-        opts.headers=authHeaders(opts._json,opts._prefer);
+        _inject();
         return fetch(url,opts);
       }).catch(function(){
         _forceRelogin();return r;
@@ -1269,6 +1277,7 @@ async function doLogin(){
     auditLog('تسجيل دخول','');
     _bootAfterAuth();
     if(window._attachAuditCard)window._attachAuditCard();
+    if(window._attachUsersCard)window._attachUsersCard();
   }catch(e){
     if(err)err.textContent='مفيش اتصال بالإنترنت — أول تسجيل دخول محتاج نت';
   }
@@ -2218,7 +2227,8 @@ function showAl(id,msg,ok){
   setTimeout(function(){e.style.display='none';},4000);
 }
 function go(id,btn){
-  if((id==='p-sum'||id==='p-reports'||id==='p-settings'||id==='p-cust')&&!isAdmin())return alert('🔒 الصفحة دي للمدير فقط — الموظف يبيع بس، واستلام الفلوس وتسجيل الدفعات للمدير');
+  var _adminPages=['p-sum','p-reports','p-settings','p-cust','p-cash','p-sup','p-upload','p-manual','p-pl','p-dash'];
+  if(_adminPages.indexOf(id)>=0&&typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصفحة دي للمدير فقط');
   // رجّع اسم التبويب لو اتغير من الطباعة
   if(window._spOldTitle){document.title=window._spOldTitle;window._spOldTitle=null;}
   if(window._cpOldTitle){document.title=window._cpOldTitle;window._cpOldTitle=null;}
@@ -2296,7 +2306,7 @@ function dashRender(){
     var twoDays=new Date();twoDays.setDate(twoDays.getDate()+2);
     var twoDaysStr=fmtDateLocal(twoDays);
     var upcoming=pending.filter(function(c){return c.due>today&&c.due<=twoDaysStr;});
-    if(overdue.length>0||upcoming.length>0){
+    if((overdue.length>0||upcoming.length>0)&&(typeof isAdmin!=='function'||isAdmin())){
       chqBox.style.display='block';
       var h='<div class="card" style="border-right:4px solid '+(overdue.length?'#c0392b':'#e67e22')+'" onclick="this.classList.toggle(\'revealed\')" style="cursor:pointer">';
       if(overdue.length){
@@ -2673,7 +2683,7 @@ function plOpenTab(shId){
     if(panel)panel.style.display=active?'block':'none';
   });
 }
-function shDel(id){
+function shDel(id){if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 حذف الشحنات للمدير فقط');
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
   dbSaveUndo('حذف شحنة');
   var invIds=db.inv.filter(function(i){return i.shId===id;}).map(function(i){return i.id;});
@@ -3224,6 +3234,12 @@ function slPrint(saleId){
 }
 
 function slHistRender(){
+  if(typeof isAdmin==='function'&&!isAdmin()){
+    var _t=todayLocal();
+    var _ff=G('sl-filt-from'),_ft=G('sl-filt-to');
+    if(_ff){_ff.value=_t;_ff.readOnly=true;_ff.style.display='none';}
+    if(_ft){_ft.value=_t;_ft.readOnly=true;_ft.style.display='none';}
+  }
   var b=G('sl-hist');
   var q=(G('sl-srch-hist')?G('sl-srch-hist').value.trim().toLowerCase():'');
   var fp=(G('sl-filt-pay')?G('sl-filt-pay').value:'');
@@ -4637,7 +4653,7 @@ function cuDiscountSave(){
 }
 
 // ── SUPPLIERS ──────────────────────────────────────────────────────
-function spAdd(){
+function spAdd(){if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 إضافة الموردين للمدير فقط');
   var nm=G('sp-nm').value.trim();if(!nm)return showAl('sp-al','يرجى إدخال الاسم',false);
   db.sups.push({id:'sp'+Date.now(),nm:nm,ph:G('sp-ph').value,cn:G('sp-cn').value});
   dbSave();showAl('sp-al','✅ تم الإضافة',true);spRender();
@@ -4706,7 +4722,7 @@ function spRender(){
   });
   repBox.innerHTML=html||'<p style="color:#aaa;text-align:center;padding:10px">لا توجد بيانات</p>';
 }
-function spDel(id){dbSaveUndo('حذف مورد');if(!confirm('حذف؟'))return;trackDelete(id);db.sups=db.sups.filter(function(s){return s.id!==id;});dbSave();spRender();}
+function spDel(id){if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 حذف الموردين للمدير فقط');dbSaveUndo('حذف مورد');if(!confirm('حذف؟'))return;trackDelete(id);db.sups=db.sups.filter(function(s){return s.id!==id;});dbSave();spRender();}
 
 // ── PAYMENT REMINDERS ──────────────────────────────────────────────
 var _remCache=null,_remTs=0;
@@ -5815,6 +5831,7 @@ window._booted=false;
 function _bootAfterAuth(){
   if(window._booted)return;window._booted=true;
   document.body.classList.add(isAdmin()?'role-admin':'role-staff');
+  if(!isAdmin()){try{go('p-inv');var _nb=document.querySelector('.nb[onclick*="p-inv"]');if(_nb){document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on');});_nb.classList.add('on');}}catch(e){}}
   var s=authGet();
   var wb=document.getElementById('who-badge');
   if(wb&&s)wb.textContent='👤 '+(s.email||'')+' — '+(isAdmin()?'مدير':'موظف');
@@ -5926,7 +5943,7 @@ function wrDel(wid){
   dbSave();wrFillSel();wrRender();
   showAl('wr-al2','✅ تم الحذف — اليومية والمصروفات زي ما هي',true);
 }
-function wrArchive(wid){
+function wrArchive(wid){if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الأرشفة للمدير فقط');
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
   var w=(db.workers||[]).find(function(x){return x.id===wid;});if(!w)return;
   var e=0,p=0,a=0;
@@ -5939,7 +5956,7 @@ function wrArchive(wid){
   dbSave();wrFillSel();wrRender();
   showAl('wr-al2','🗄️ تم أرشفة '+w.nm+' — تاريخه المالي محفوظ بالكامل',true);
 }
-function wrUnarchive(wid){
+function wrUnarchive(wid){if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الاستعادة للمدير فقط');
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
   var w=(db.workers||[]).find(function(x){return x.id===wid;});if(!w)return;
   w.archived=0;w.mt=new Date().toISOString();
@@ -6659,7 +6676,82 @@ async function setChangePass(){
         box.innerHTML=h+'</table>';
       }).catch(function(){box.innerHTML='<p style="color:#c0392b">تعذر التحميل — اتأكد من النت وإن جدول audit_log اتعمل</p>';});
   };
-  if(authGet())window._attachAuditCard();
+  // ══════ 👥 إدارة المستخدمين (للمدير) — عبر وظيفة سحابية admin-users ══════
+  window._usersApi=function(payload){
+    var s=authGet();if(!s)return Promise.reject(new Error('لا توجد جلسة'));
+    return fetch(SUPA_URL+'/functions/v1/admin-users',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+s.access_token,'apikey':SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify(payload)
+    }).then(function(r){
+      return r.json().catch(function(){throw new Error('الوظيفة السحابية admin-users مش مركّبة — راجع ملف خطوات-إدارة-المستخدمين');})
+        .then(function(j){if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));return j;});
+    });
+  };
+  window.usersLoad=function(){
+    var box=document.getElementById('um-box');if(!box)return;
+    box.innerHTML='<p style="color:#888">⏳ جاري التحميل...</p>';
+    _usersApi({action:'list'}).then(function(j){
+      window._umMe=(j.me&&j.me.id)||'';
+      if(!j.users||!j.users.length){box.innerHTML='<p style="color:#888">لا يوجد مستخدمون</p>';return;}
+      var h='<table style="width:100%;border-collapse:collapse">';
+      j.users.forEach(function(u){
+        var isMe=(u.id===window._umMe);
+        var badge=u.role==='admin'?'<span class="bx bxg">مدير</span>':'<span class="bx bxo">موظف</span>';
+        var other=u.role==='admin'?'staff':'admin';
+        var otherLbl=u.role==='admin'?'⬇️ خليه موظف':'⬆️ خليه مدير';
+        h+='<tr style="border-bottom:1px solid #eee"><td style="padding:6px;word-break:break-all">'+esc(u.email||'')+(isMe?' <span style="color:#888;font-size:0.7rem">(أنت)</span>':'')+'</td>'
+          +'<td style="padding:6px">'+badge+'</td>'
+          +'<td style="padding:6px;white-space:nowrap;text-align:left">'
+          +(isMe?'':'<button class="btn bs" style="background:#eef1f4;color:#345;margin-inline-end:4px" onclick="usersSetRole(\''+u.id+'\',\''+other+'\',\''+esc(u.email||'')+'\')">'+otherLbl+'</button>'
+          +'<button class="btn bd bs" onclick="usersDel(\''+u.id+'\',\''+esc(u.email||'')+'\')">🗑</button>')
+          +'</td></tr>';
+      });
+      box.innerHTML=h+'</table><p style="font-size:0.7rem;color:#999;margin-top:6px">ℹ️ تغيير الدور يسري على المستخدم مع أول تسجيل دخول جديد له</p>';
+    }).catch(function(e){box.innerHTML='<p style="color:#c0392b;font-size:0.8rem">⚠️ '+esc(e.message||String(e))+'</p>';});
+  };
+  window.usersAdd=function(){
+    var em=(document.getElementById('um-email')||{}).value||'';
+    var pw=(document.getElementById('um-pass')||{}).value||'';
+    var rl=(document.getElementById('um-role')||{}).value||'staff';
+    if(!em.trim()||pw.length<6)return alert('اكتب إيميل صحيح وباسورد 6 أحرف على الأقل');
+    if(!confirm('إضافة '+em.trim()+' كـ '+(rl==='admin'?'مدير':'موظف')+'؟'))return;
+    _usersApi({action:'create',email:em.trim(),password:pw,role:rl}).then(function(){
+      auditLog('إضافة مستخدم',em.trim()+' ('+rl+')');
+      document.getElementById('um-email').value='';document.getElementById('um-pass').value='';
+      alert('✅ تم إنشاء الحساب');usersLoad();
+    }).catch(function(e){alert('⚠️ '+(e.message||e));});
+  };
+  window.usersSetRole=function(uid,role,email){
+    if(!confirm('تحويل '+email+' إلى '+(role==='admin'?'مدير (كل الصلاحيات)':'موظف (مخزون+مبيعات+عمال فقط)')+'؟'))return;
+    _usersApi({action:'setRole',user_id:uid,role:role}).then(function(){
+      auditLog('تغيير دور مستخدم',email+' → '+role);usersLoad();
+    }).catch(function(e){alert('⚠️ '+(e.message||e));});
+  };
+  window.usersDel=function(uid,email){
+    if(!confirm('🗑 حذف حساب '+email+' نهائياً؟\nمش هيقدر يدخل البرنامج تاني.'))return;
+    _usersApi({action:'delete',user_id:uid}).then(function(){
+      auditLog('حذف مستخدم',email);usersLoad();
+    }).catch(function(e){alert('⚠️ '+(e.message||e));});
+  };
+  window._attachUsersCard=function(){
+    try{
+      if(typeof isAdmin!=='function'||!isAdmin())return;
+      if(document.getElementById('users-card'))return;
+      var sp=document.getElementById('p-settings');if(!sp)return;
+      var d=document.createElement('div');d.className='card';d.id='users-card';d.style.marginTop='14px';
+      d.innerHTML='<h3 style="margin:0 0 10px">👥 إدارة المستخدمين</h3>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">'
+        +'<input id="um-email" placeholder="الإيميل" style="flex:2;min-width:150px;padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem">'
+        +'<input id="um-pass" type="password" placeholder="باسورد (6+)" style="flex:1;min-width:110px;padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem">'
+        +'<select id="um-role" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="staff">موظف</option><option value="admin">مدير</option></select>'
+        +'<button class="btn bp" onclick="usersAdd()" style="font-size:0.82rem">➕ إضافة</button>'
+        +'<button class="btn" onclick="usersLoad()" style="background:#eef1f4;color:#345;font-size:0.82rem">🔄 تحديث القائمة</button>'
+        +'</div><div id="um-box" style="font-size:0.8rem;max-height:320px;overflow:auto"></div>';
+      sp.appendChild(d);
+    }catch(e){}
+  };
+  if(authGet()){window._attachAuditCard();window._attachUsersCard();}
 })();
 </script>
 
