@@ -7,23 +7,23 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.4 — إدارة المستخدمين من داخل البرنامج (إضافة/حذف/تغيير أدوار) عبر وظيفة سحابية admin-users (يوليو 2026) -->
+<!-- v11.4.2 — إصلاح تخطيط الشريط الجانبي (القائمة رجعت مساحتها) + بطاقات الإعدادات تترسم كل مرة (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{--dk:#3d1f0a;--md:#6b3a1f;--lt:#c8854a;--pale:#e8c49a;--cr:#faf3e8;--ac:#d4812a;--gr:#2a7d4f;--rd:#c0392b;--sh:rgba(61,31,10,0.12);}
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Cairo',sans-serif;background:var(--cr);min-height:100vh;-webkit-text-size-adjust:100%;}
-.sb{position:fixed;right:0;top:0;bottom:0;width:220px;background:linear-gradient(180deg,var(--dk),var(--md));display:flex;flex-direction:column;z-index:100;box-shadow:-3px 0 15px var(--sh);}
+.sb{position:fixed;right:0;top:0;bottom:0;width:220px;background:linear-gradient(180deg,var(--dk),var(--md));display:flex;flex-direction:column;z-index:100;box-shadow:-3px 0 15px var(--sh);overflow:hidden;}
 .sb-logo{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.1);text-align:center;display:flex;align-items:center;gap:8px;justify-content:center;}
 .sb-logo span{font-size:1.4rem;}
 .sb-logo h1{color:var(--pale);font-size:0.88rem;font-weight:900;}
 .sb-logo p{display:none;}
-.sb-nav{flex:1;padding:6px 6px;display:flex;flex-direction:column;gap:1px;overflow-y:auto;}
+.sb-nav{flex:1 1 auto;min-height:250px;padding:6px 6px;display:flex;flex-direction:column;gap:1px;overflow-y:auto;}
 .nb{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;border:none;background:transparent;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0);touch-action:manipulation;color:rgba(232,196,154,0.75);font-family:'Cairo',sans-serif;font-size:0.8rem;font-weight:600;width:100%;text-align:right;transition:all 0.2s;}
 .nb:hover{background:rgba(255,255,255,0.08);color:var(--pale);}
 .nb.on{background:var(--ac);color:#fff;}
-.sb-foot{padding:8px;border-top:1px solid rgba(255,255,255,0.1);}
+.sb-foot{flex:0 0 auto;padding:6px 8px;border-top:1px solid rgba(255,255,255,0.1);max-height:52vh;overflow-y:auto;}
 .dt{background:rgba(255,255,255,0.08);border-radius:7px;padding:5px;text-align:center;color:rgba(232,196,154,0.6);font-size:0.65rem;}
 .main{margin-right:220px;padding:20px;-webkit-overflow-scrolling:touch;}
 .pg{display:none;}
@@ -243,8 +243,8 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
   <div class="sb-foot">
     <div class="dt" id="dt"></div>
     <div id="sync-indicator" onclick="updateSyncIndicator()" style="margin-top:6px;padding:5px 8px;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;text-align:center;cursor:pointer;background:rgba(42,125,79,0.12);color:#2a7d4f;transition:all 0.3s">🟢 متزامن</div>
-    <div id="who-badge" style="margin-top:6px;font-family:Cairo,sans-serif;font-size:0.62rem;text-align:center;color:#c9b8a3;word-break:break-all"></div>
-    <button onclick="doLogout()" style="margin-top:6px;width:100%;background:rgba(192,57,43,0.18);color:#e8b4a8;border:none;border-radius:6px;padding:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">🚪 تسجيل خروج</button>
+    <div id="who-badge" style="margin-top:4px;font-family:Cairo,sans-serif;font-size:0.58rem;text-align:center;color:#c9b8a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+    <button onclick="doLogout()" style="margin-top:4px;width:100%;background:rgba(192,57,43,0.18);color:#e8b4a8;border:none;border-radius:6px;padding:5px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">🚪 تسجيل خروج</button>
     <div style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
       <button onclick="dbBackup()" style="padding:6px;background:#2a7d4f;color:white;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">💾 حفظ</button>
       <div style="position:relative">
@@ -6542,6 +6542,9 @@ function fillAllPayDropdowns(){
   });
 }
 function setInit(){
+  // ترسم بطاقات المدير كل مرة تُفتح الإعدادات (مش عند الدخول فقط)
+  try{if(window._attachAuditCard)window._attachAuditCard();}catch(e){}
+  try{if(window._attachUsersCard)window._attachUsersCard();}catch(e){}
   // مدة القفل
   var dur=localStorage.getItem('woodstore_lock_min')||'30';
   var sel=G('set-lock-dur');if(sel)sel.value=dur;
