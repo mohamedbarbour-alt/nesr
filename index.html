@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.6 — شحنات في الطريق (محجوبة عن البيع) + مصاريف الرسالة وتوزيعها بالمتر المكعب + رقم العربية (يوليو 2026) -->
+<!-- v11.7 — زر مسح الحجوزات المعلقة + تحرير الحجز عند حذف البيعة + تعديل مرتب العامل + زر إظهار الكل للعملاء (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -665,7 +665,9 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <!-- CUSTOMERS -->
 <div id="p-cust" class="pg">
   <div class="ph"><div><h2>👥 العملاء</h2></div>
-    <button class="btn bp" onclick="cuShowAdd()">➕ عميل جديد</button></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn bo" id="cu-reveal-btn" onclick="cuToggleReveal()">👁️ إظهار الكل</button>
+    <button class="btn bp" onclick="cuShowAdd()">➕ عميل جديد</button></div></div>
   <div class="card" id="cu-add-card" style="display:none">
     <div class="ch"><span class="ct">إضافة عميل</span><button class="btn bo bs" onclick="G('cu-add-card').style.display='none'">✕</button></div>
     <div class="fg" style="grid-template-columns:repeat(2,1fr)">
@@ -3757,6 +3759,9 @@ function saleDel(saleId){
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
   dbSaveUndo('حذف بيعة');
   if(!confirm('حذف الفاتورة؟ الرابطات هترجع للمخزون والحركة هتتشال من اليومية'))return;
+  // 🔓 حرّر حجز الرابطات على السيرفر فوراً — عشان تقدر تبيعها تاني من غير مشاكل
+  var _sDel=db.sales.find(function(x){return x.id===saleId;});
+  if(_sDel&&typeof _releaseClaims==='function'){_releaseClaims((_sDel.lines||[]).map(function(l){return l.invId;}));}
   trackDelete(saleId);trackDeleteCb(saleId);
   var s=db.sales.find(function(x){return x.id===saleId;});if(!s)return;
   // إلغاء أي شيكات مرتبطة بالبيعة + مسح حركات تحصيلها من اليومية
@@ -3996,6 +4001,7 @@ function cuRender(){
       '</div>';
     }).join('');
   }
+  try{_reapplyReveal();}catch(e){}
 }
 function cuToggleReminder(){
   var box=G('cu-reminder'),arrow=G('cu-reminder-arrow');
@@ -6002,6 +6008,19 @@ function wrFillSel(){
     s.innerHTML+='<option value="'+w.id+'">'+esc(w.nm)+'</option>';
   });
 }
+function wrEditDaily(wid){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 تعديل المرتب للمدير فقط');
+  var w=(db.workers||[]).find(function(x){return x.id===wid;});if(!w)return;
+  var v=prompt('💰 المرتب اليومي الجديد لـ '+w.nm+' (بالجنيه):\n\n(ملاحظة: التعديل بيأثر على الحضور الجديد بس — الأيام المسجلة قبل كده بتفضل بمرتبها الأصلي)',w.daily||0);
+  if(v===null)return;
+  var nd=parseFloat(v);
+  if(isNaN(nd)||nd<0)return alert('اكتب رقم صحيح');
+  var old=w.daily||0;
+  w.daily=nd;w.mt=new Date().toISOString();
+  dbSave();wrRender();
+  try{auditLog('تعديل مرتب عامل',w.nm+': '+old+' → '+nd);}catch(e){}
+  showAl('wr-al2','✅ اتعدّل مرتب '+w.nm+' لـ '+fmt(nd)+' ج/يوم',true);
+}
 function wrAdd(){
   var nm=(G('wr-nm').value||'').trim();
   if(!nm)return showAl('wr-al','أدخل اسم العامل',false);
@@ -6012,6 +6031,17 @@ function wrAdd(){
   showAl('wr-al','✅ تم إضافة '+nm,true);
   wrFillSel();wrRender();
 }
+function cuToggleReveal(){
+  var on=!window._cuRevealAll;
+  window._cuRevealAll=on;
+  var p=document.getElementById('p-cust');if(!p)return;
+  // كل الخلايا المموّهة
+  p.querySelectorAll('.cu-blur-cell').forEach(function(el){el.classList.toggle('shown',on);});
+  p.querySelectorAll('.sc').forEach(function(el){el.classList.toggle('revealed',on);});
+  var btn=document.getElementById('cu-reveal-btn');
+  if(btn)btn.textContent=on?'🙈 إخفاء الكل':'👁️ إظهار الكل';
+}
+function _reapplyReveal(){if(window._cuRevealAll){var p=document.getElementById('p-cust');if(p){p.querySelectorAll('.cu-blur-cell').forEach(function(el){el.classList.add('shown');});p.querySelectorAll('.sc').forEach(function(el){el.classList.add('revealed');});}}}
 function _beep(){
   try{var ac=new(window.AudioContext||window.webkitAudioContext)();var o=ac.createOscillator();var g=ac.createGain();o.connect(g);g.connect(ac.destination);o.frequency.value=880;g.gain.value=0.15;o.start();o.stop(ac.currentTime+0.1);setTimeout(function(){var o2=ac.createOscillator();var g2=ac.createGain();o2.connect(g2);g2.connect(ac.destination);o2.frequency.value=1320;g2.gain.value=0.12;o2.start();o2.stop(ac.currentTime+0.12);},120);}catch(e){}
   if(navigator.vibrate)try{navigator.vibrate([60,40,60]);}catch(e){}
@@ -6325,7 +6355,7 @@ function wrRender(){
     return '<div class="card" style="margin-bottom:12px;border-right:4px solid '+(todayAtt?'#27ae60':'#e74c3c')+'">'+
       // الهيدر
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
-        '<div><strong style="font-size:0.95rem">👷 '+esc(w.nm)+'</strong> <span style="font-size:0.72rem;color:#888;background:#f0ebe2;padding:2px 8px;border-radius:10px">'+fmt(w.daily)+' ج/يوم</span></div>'+
+        '<div><strong style="font-size:0.95rem">👷 '+esc(w.nm)+'</strong> <span style="font-size:0.72rem;color:#888;background:#f0ebe2;padding:2px 8px;border-radius:10px;cursor:pointer" onclick="wrEditDaily(&quot;'+w.id+'&quot;)" title="اضغط لتعديل المرتب اليومي">'+fmt(w.daily)+' ج/يوم ✏️</span></div>'+
         '<div style="display:flex;gap:4px">'+
           (!todayAtt?'<button class="btn bg_" style="font-size:0.72rem;padding:5px 10px;touch-action:manipulation" onclick="wrQuickAtt(&quot;'+w.id+'&quot;)">✅ حضور</button>':
           '<span style="background:#e8f7ef;color:#27ae60;padding:5px 10px;border-radius:8px;font-size:0.72rem;font-weight:700">✅ حاضر</span>')+
@@ -6668,6 +6698,7 @@ function setInit(){
   // ترسم بطاقات المدير كل مرة تُفتح الإعدادات (مش عند الدخول فقط)
   try{if(window._attachAuditCard)window._attachAuditCard();}catch(e){}
   try{if(window._attachUsersCard)window._attachUsersCard();}catch(e){}
+  try{if(window._attachClaimsCard)window._attachClaimsCard();}catch(e){}
   // مدة القفل
   var dur=localStorage.getItem('woodstore_lock_min')||'30';
   var sel=G('set-lock-dur');if(sel)sel.value=dur;
@@ -6861,6 +6892,30 @@ async function setChangePass(){
       auditLog('حذف مستخدم',email);usersLoad();
     }).catch(function(e){alert('⚠️ '+(e.message||e));});
   };
+  window.clearStuckClaims=function(){
+    if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 للمدير فقط');
+    if(!confirm('🔓 مسح كل الحجوزات المعلقة؟\n\nده بيحل مشكلة "الرابطة مش عايزة تتباع" اللي بتحصل لو النت قطع أثناء البيع.\n\n✅ آمن تماماً — مش بيمس بياناتك ولا فواتيرك، بيمسح علامات مؤقتة بس.'))return;
+    var s=authGet();if(!s)return alert('مفيش جلسة');
+    var btn=document.getElementById('clr-claims-btn');if(btn){btn.disabled=true;btn.textContent='⏳ جاري المسح...';}
+    fetch(SUPA_URL+'/rest/v1/sold_claims?inv_id=neq.__none__',{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+s.access_token,'Prefer':'return=minimal'}})
+      .then(function(r){
+        if(btn){btn.disabled=false;btn.textContent='🔓 مسح الحجوزات المعلقة';}
+        if(r.ok){auditLog('مسح الحجوزات المعلقة','');alert('✅ تم مسح الحجوزات المعلقة — جرّب تبيع الرابطة دلوقتي');}
+        else alert('⚠️ تعذر المسح — اتأكد من النت');
+      }).catch(function(){if(btn){btn.disabled=false;btn.textContent='🔓 مسح الحجوزات المعلقة';}alert('⚠️ تعذر المسح — اتأكد من النت');});
+  };
+  window._attachClaimsCard=function(){
+    try{
+      if(typeof isAdmin!=='function'||!isAdmin())return;
+      if(document.getElementById('claims-card'))return;
+      var sp=document.getElementById('p-settings');if(!sp)return;
+      var d=document.createElement('div');d.className='card';d.id='claims-card';d.style.marginTop='14px';
+      d.innerHTML='<h3 style="margin:0 0 8px">🔓 حل مشكلة البيع المعلّق</h3>'
+        +'<p style="font-size:0.8rem;color:#777;margin:0 0 10px">لو رابطة رفضت تتباع وطلعت رسالة "اتباعت من جهاز تاني" — رغم إنها متباعتش — اضغط الزر ده.</p>'
+        +'<button class="btn bo" id="clr-claims-btn" onclick="clearStuckClaims()">🔓 مسح الحجوزات المعلقة</button>';
+      sp.appendChild(d);
+    }catch(e){}
+  };
   window._attachUsersCard=function(){
     try{
       if(typeof isAdmin!=='function'||!isAdmin())return;
@@ -6878,7 +6933,7 @@ async function setChangePass(){
       sp.appendChild(d);
     }catch(e){}
   };
-  if(authGet()){window._attachAuditCard();window._attachUsersCard();}
+  if(authGet()){window._attachAuditCard();window._attachUsersCard();window._attachClaimsCard();}
 })();
 </script>
 
