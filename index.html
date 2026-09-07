@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.7 — زر مسح الحجوزات المعلقة + تحرير الحجز عند حذف البيعة + تعديل مرتب العامل + زر إظهار الكل للعملاء (يوليو 2026) -->
+<!-- v11.9.10 — إصلاح المرتجع: يحسب التكعيب المُباع للرابطة المجهولة + يرجّع الدفعة والخزنة الصافية بعد العمولة (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -158,6 +158,15 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
   .uz{padding:24px 14px;}
 }
 
+
+/* حماية كل الجداول من القطع على الموبايل */
+@media(max-width:768px){
+  .card table,.pg table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;max-width:100%}
+  .card table thead,.pg table thead{display:table-header-group}
+  .card table tbody,.pg table tbody{display:table-row-group}
+  .card table tr,.pg table tr{display:table-row}
+  .card table th,.card table td,.pg table th,.pg table td{display:table-cell}
+}
 @media(max-width:480px){
   .sg{grid-template-columns:1fr 1fr;}
   .fg{grid-template-columns:1fr;}
@@ -277,6 +286,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
   </div>
   <div id="dash-dup-alert" style="display:none;margin-bottom:12px"></div>
   <div id="dash-transit" class="card" style="display:none;margin-bottom:12px;border-right:5px solid #d4812a"></div>
+  <div id="dash-pending" class="card" style="display:none;margin-bottom:12px;border-right:5px solid #8e44ad"></div>
   <div id="dash-chq-alert" style="display:none;margin-bottom:12px"></div>
   <div class="tw">
     <div class="card"><div class="ch"><span class="ct">📋 آخر الشحنات</span></div>
@@ -433,7 +443,10 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <div id="p-inv" class="pg">
   <div class="staff-only" style="display:none;background:#eef6ff;border:1px solid #cfe4fb;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem;color:#2c5d8a">📋 تقدر تعمل الجرد وتكتب التكعيب على كل رابطة — أسماء المصانع والموردين مخفية.</div>
   <div class="ph"><div><h2>📦 المخزون</h2></div>
-    <input style="padding:7px 11px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.8rem" placeholder="🔍 بحث..." oninput="filt('inv-t',this.value)"></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn adm" id="audit-open-btn" style="background:#8e44ad;color:white" onclick="stockAuditToggle()">📋 جرد الرابطات المجهولة</button>
+    <input style="padding:7px 11px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.8rem" placeholder="🔍 بحث..." oninput="filt('inv-t',this.value)"></div></div>
+  <div id="stock-audit-box" class="card adm" style="display:none;margin-bottom:14px;border:2px solid #8e44ad"></div>
   <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
     <div style="display:flex;flex-direction:column;gap:2px">
       <label style="font-size:0.65rem;color:#888;font-weight:700">رقم الرابطة</label>
@@ -565,6 +578,8 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
             <select id="sl-f-spec" onchange="slSearch(G('sl-srch').value)" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.78rem"><option value="">كل الدرجات</option></select>
             <select id="sl-f-thick" onchange="slSearch(G('sl-srch').value)" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.78rem"><option value="">كل السماكات</option></select>
+            <select id="sl-f-len" onchange="slSearch(G('sl-srch').value)" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.78rem"><option value="">كل الأطوال</option></select>
+            <select id="sl-f-pcs" onchange="slSearch(G('sl-srch').value)" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.78rem"><option value="">كل الأعداد</option></select>
             <select id="sl-f-ship" onchange="slSearch(G('sl-srch').value)" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.78rem"><option value="">كل الشحنات</option></select>
           </div>
           <div style="display:flex;gap:8px">
@@ -576,7 +591,10 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
           <span style="font-weight:700;font-size:0.85rem;color:var(--dk)">🧺 الرابطات المختارة</span>
+          <div style="display:flex;gap:5px">
+          <button class="btn bs adm" style="background:#8e44ad;color:white" onclick="slAddNoNum()">🏷️ رابطة رقمها ضاع</button>
           <button class="btn bo bs" onclick="slAddLine()">+ يدوي</button>
+          </div>
         </div>
         <div id="sl-lines"></div>
         <div style="background:var(--cr);border-radius:10px;padding:12px;margin-top:10px">
@@ -1042,6 +1060,16 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
         <span class="ct" style="font-size:0.85rem">إجمالي م³ المبيعات بالدرجة</span>
       </div>
       <div class="scr"><table id="rep-sal-spec" style="width:100%;border-collapse:collapse"></table></div>
+    </div>
+    <div class="card YEARLY-MARKER" style="margin-top:14px">
+      <div class="ch"><span class="ct">📅 إحصائيات سنوية — المشتريات والمبيعات</span></div>
+      <div id="rep-yearly"></div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <div class="ch"><span class="ct">📊 جودة مقاسات المصانع (الرابطات المعاد تكعيبها)</span>
+        <button class="btn bo bs adm" onclick="recutClear()">🗑️ تصفية السجل</button></div>
+      <div id="rep-recut-al"></div>
+      <div id="rep-recut"></div>
     </div>
   </div>
 </div>
@@ -1649,6 +1677,7 @@ function manualSync(){
     window._pendingSync=false;window._uploading=false;updateSyncIndicator();
     localStorage.removeItem('woodstore_pending');
     var ts=serverTs||new Date().toISOString();
+    _checkClockSkew(serverTs);
     localStorage.setItem('woodstore_last_sync',ts);
     localStorage.setItem('woodstore_local_mod',ts);
     if(st){st.style.color='#4dff91';st.textContent='\u2705 تم الرفع بنجاح — '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});}
@@ -1662,6 +1691,20 @@ function manualSync(){
     setTimeout(function(){if(btn)btn.style.background='#2980b9';},3000);
   });
 }
+function _checkClockSkew(serverTs){
+  try{
+    if(!serverTs)return;
+    var sv=new Date(serverTs).getTime(), lo=Date.now();
+    var skewMin=Math.abs(sv-lo)/60000;
+    if(skewMin>10){
+      var warned=sessionStorage.getItem('clock_warned');
+      if(!warned){
+        sessionStorage.setItem('clock_warned','1');
+        alert('\u26a0\ufe0f تحذير: ساعة الجهاز ده مختلفة عن السيرفر بـ'+Math.round(skewMin)+' دقيقة.\n\nده ممكن يلخبط المزامنة بين أجهزتك (تعديل جديد يخسر قدام تعديل قديم).\n\n\ud83d\udca1 الحل: اضبط تاريخ ووقت الجهاز على "تلقائي" من إعدادات الجهاز.');
+      }
+    }
+  }catch(e){}
+}
 function dbSaveRemote(){
   // 1) احفظ محلي فوراً (حتى لو النت فصل البيانات ما تضيعش)
   try{persistDB(JSON.stringify(db));}catch(e){}
@@ -1672,6 +1715,7 @@ function dbSaveRemote(){
     localStorage.removeItem('woodstore_pending');
     // خزّن وقت السيرفر الفعلي عشان الـ polling ما يسحبش نفس البيانات تاني
     var ts=serverTs||new Date().toISOString();
+    _checkClockSkew(serverTs);
     localStorage.setItem('woodstore_last_sync',ts);
     localStorage.setItem('woodstore_local_mod',ts);
     var st=G('backup-status');
@@ -1871,6 +1915,7 @@ function dbMerge(local,remote){
   m.cashbook=mergeArr(local.cashbook,remote.cashbook);
   m.expenses=mergeArr(local.expenses,remote.expenses);
   m.cheques=mergeArr(local.cheques,remote.cheques);
+  m.recutLog=mergeArr(local.recutLog,remote.recutLog);
   m.sups=mergeArr(local.sups,remote.sups);
   m.inv=mergeArr(local.inv,remote.inv);
   // العملاء — دمج بالـ ID + دمج الدفعات مع استبعاد المحذوفات
@@ -1983,7 +2028,8 @@ function recalcInv(){
   db.inv._lastCalc=Date.now();
   _invDirty=false;
 }
-function markInvDirty(){_invDirty=true;}
+function markInvDirty(){
+  _invalidateInvMap();_invDirty=true;}
 
 function dbBackup(){
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
@@ -2184,6 +2230,7 @@ function dbRestoreFromText(){
     db.ships=db.ships||[];db.inv=db.inv||[];db.sales=db.sales||[];
     db.custs=db.custs||[];db.sups=db.sups||[];db.returns=db.returns||[];db.cashbook=db.cashbook||[];
     db.workers=db.workers||[];db.expenses=db.expenses||[];db.cheques=db.cheques||[];db.deleted=db.deleted||[];
+    db.recutLog=db.recutLog||[];
     recalcInv();
     // كتابة مباشرة على السيرفر (بدون دمج) قبل إعادة التحميل
     try{persistDB(JSON.stringify(db));}catch(e){}
@@ -2278,9 +2325,16 @@ function setDate(){
 function dashRender(){
   recalcInv();
   var av=db.inv.filter(function(i){return i.avail>0;});
-  G('d1').textContent=fmt(av.length);
-  G('d2').textContent=fmt(av.reduce(function(s,i){return s+(i.pcs||0);},0));
-  G('d3').textContent=av.reduce(function(s,i){return s+(i.net||0);},0).toFixed(2);
+  var _pendList=pendingNoNum();
+  var _pendCnt=_pendList.length;
+  var _pendM3=_pendList.reduce(function(s,p){return s+(p.net||0);},0);
+  var _pendPcs=_pendList.reduce(function(s,p){return s+(p.pcs||0);},0);
+  // المخزون الفعلي الكامل (الصفوف المجهولة لسه موجودة لحد الجرد) — والمعلّق يظهر كتنبيه منفصل
+  var _avPcs=av.reduce(function(s,i){return s+(i.pcs||0);},0);
+  var _avM3=av.reduce(function(s,i){return s+(i.net||0);},0);
+  G('d1').textContent=fmt(av.length)+(_pendCnt>0?' (منهم '+_pendCnt+' معلّق للجرد)':'');
+  G('d2').textContent=fmt(_avPcs);
+  G('d3').textContent=_avM3.toFixed(2);
   G('d4').textContent=shipsArrived().length;
   var sb=G('d-sh'),rs=[...shipsArrived()].reverse().slice(0,5);
   sb.innerHTML=rs.length?rs.map(function(s){return '<tr><td>'+s.dt+'</td><td>'+esc(s.ref)+'</td><td>'+esc(s.sup)+'</td><td>'+fmt(s.tp)+'</td><td>'+(s.tn||0).toFixed(3)+'</td></tr>';}).join(''):'<tr><td colspan="5" style="color:#aaa;padding:12px">لا توجد شحنات</td></tr>';
@@ -2319,6 +2373,18 @@ function dashRender(){
     var twoDays=new Date();twoDays.setDate(twoDays.getDate()+2);
     var twoDaysStr=fmtDateLocal(twoDays);
     var upcoming=pending.filter(function(c){return c.due>today&&c.due<=twoDaysStr;});
+    // بطاقة الرابطات المباعة بانتظار الجرد
+    var _pend=pendingNoNum();
+    var _pendBox=G('dash-pending');
+    if(_pendBox){
+      if(_pend.length&&(typeof isAdmin!=='function'||isAdmin())){
+        var _pendM3=_pend.reduce(function(s,p){return s+(p.net||0);},0);
+        _pendBox.style.display='block';
+        _pendBox.innerHTML='<div class="ch"><span class="ct">🏷️ رابطات مباعة بانتظار الجرد: '+_pend.length+'</span>'
+          +'<button class="btn" style="background:#8e44ad;color:white;font-size:0.72rem;padding:5px 12px" onclick="go(\'p-inv\');setTimeout(stockAuditOpen,150)">📋 افتح الجرد</button></div>'
+          +'<div style="font-size:0.82rem">دي رابطات اتباعت بمواصفاتها ('+_pendM3.toFixed(3)+' م³) — الإجمالي اتقلّل، بس محتاجة تحدد صفها بالظبط وقت الجرد</div>';
+      } else _pendBox.style.display='none';
+    }
     // بطاقة الشحنات في الطريق
     var _trShips=(db.ships||[]).filter(function(s){return s.transit;});
     var _trBox=G('dash-transit');
@@ -2408,6 +2474,12 @@ function previewXL(){
   if(cols[1]===null||cols[4]===null)return showAl('up-al','يرجى تحديد number و pieces',false);
   var get=function(row,c){return c!==null&&c<row.length?row[c]:'';};
   var parsed=_xRaw.map(function(row){return {spec:String(get(row,cols[0])||'abc').trim(),num:String(get(row,cols[1])||'').trim(),thick:parseFloat(get(row,cols[2]))||38,len:String(get(row,cols[3])||'').trim(),pcs:parseInt(get(row,cols[4]))||0,net:parseFloat(String(get(row,cols[5])||'0').replace(',','.'))||0,factory:String(get(row,cols[6])||'').trim(),truck:String(get(row,cols[7])||'').trim()};}).filter(function(r){return r.num&&r.pcs>0;});
+  // تحذير: صفوف بتكعيب صفر أو سالب (بتلخبط الحسابات)
+  var _badNet=parsed.filter(function(r){return !(r.net>0);});
+  if(_badNet.length){
+    var _nums=_badNet.slice(0,5).map(function(r){return '#'+r.num;}).join('، ');
+    showAl('up-al','⚠️ تنبيه: '+_badNet.length+' رابطة تكعيبها صفر أو ناقص ('+_nums+(_badNet.length>5?' وغيرها':'')+') — اتأكد من عمود m3 في الملف. هتتسجل لكن هتحتاج تصحيح بزر ✏️ م³.',false);
+  }
   if(!parsed.length)return showAl('up-al','لا توجد بيانات صالحة',false);
   window._xParsed=parsed;
   G('up-cnt').textContent=parsed.length+' صف';
@@ -2575,6 +2647,74 @@ function mnSave(){
 
 // ── INVENTORY ──────────────────────────────────────────────────────
 // تحديث invRender - فلاتر + تعبئة الـ selects
+function stockAuditToggle(){var b=document.getElementById('stock-audit-box');if(!b)return;if(b.style.display==='none'){stockAuditOpen();}else{b.style.display='none';}}
+function stockAuditOpen(){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الجرد للمدير فقط');
+  var b=document.getElementById('stock-audit-box');if(!b)return;
+  b.style.display='block';
+  var pend=pendingNoNum();
+  if(!pend.length){b.innerHTML='<h3 style="margin:0 0 6px;color:#8e44ad">📋 جرد الرابطات المجهولة</h3><p style="color:#888;font-size:0.85rem;margin:0">مفيش رابطات مباعة بانتظار الجرد ✅ — كل حاجة مطابقة.</p>';return;}
+  var h='<h3 style="margin:0 0 4px;color:#8e44ad">📋 جرد الرابطات المجهولة ('+pend.length+')</h3>'
+    +'<p style="font-size:0.78rem;color:#888;margin:0 0 12px">لكل رابطة مباعة: اختار الصف الأصلي المطابق من المخزون واقفله. البرنامج يحسب العجز/الزيادة في التكعيب.</p>';
+  pend.forEach(function(p,idx){
+    // الصفوف المرشّحة: نفس النوع + الطول + العدد (متاحة)
+    var cands=(db.inv||[]).filter(function(i){
+      return i.avail>0 && i.spec===p.spec && String(i.len)===String(p.len) && String(i.pcs)===String(p.pcs)
+        && (!p.factory||!i.factory||i.factory===p.factory)
+        && (!p.shRef||!i.shRef||i.shRef===p.shRef);
+    });
+    h+='<div style="background:#faf5ff;border:1px solid #e5d5f5;border-radius:10px;padding:12px;margin-bottom:10px">'
+      +'<div style="font-size:0.82rem;margin-bottom:8px"><b>🏷️ '+esc(p.spec)+'</b> | '+(p.thick||38)+'mm | طول '+esc(p.len)+' | '+fmt(p.pcs)+' لوح | <b style="color:var(--ac)">'+(p.net||0).toFixed(3)+' م³</b>'
+      +'<div style="font-size:0.72rem;color:#888;margin-top:2px">اتباعت لـ '+esc(p.cnm||'نقدي')+' يوم '+p.dt+(p.factory?' | مصنع: '+esc(p.factory):'')+(p.shRef?' | شحنة: '+esc(p.shRef):'')+'</div></div>';
+    if(!cands.length){
+      h+='<p style="font-size:0.78rem;color:#c0392b;margin:0">⚠️ مفيش صف مطابق في المخزون (نفس النوع/الطول/العدد). يمكن اتقفل قبل كده، أو المواصفات مختلفة.</p>'
+        +'<button class="btn bo bs" style="margin-top:6px" onclick="stockAuditForce('+idx+')">تسوية يدوية (بدون قفل صف)</button>';
+    } else {
+      h+='<div style="font-size:0.76rem;font-weight:700;margin-bottom:4px">اختار الصف اللي اتباع فعلاً:</div>';
+      h+='<div style="display:grid;gap:5px">';
+      cands.forEach(function(c){
+        var diff=(p.net||0)-(c.net||0); // موجب=زيادة، سالب=عجز
+        var diffTxt=Math.abs(diff)<0.001?'مطابق':(diff>0?('زيادة '+diff.toFixed(3)):('عجز '+Math.abs(diff).toFixed(3)));
+        var diffColor=Math.abs(diff)<0.001?'#1e6b3c':(diff>0?'#1e6b3c':'#c0392b');
+        h+='<div style="display:flex;justify-content:space-between;align-items:center;background:white;border:1px solid #e8ddd0;border-radius:8px;padding:8px">'
+          +'<div style="font-size:0.8rem"><b>#'+esc(String(c.num))+'</b> | '+(c.net||0).toFixed(3)+' م³ <span style="color:'+diffColor+';font-weight:700">('+diffTxt+' م³)</span></div>'
+          +'<button class="btn bg_ bs" onclick="stockAuditClose('+idx+',\''+c.id+'\')">✅ ده الصف — اقفله</button>'
+          +'</div>';
+      });
+      h+='</div>';
+    }
+    h+='</div>';
+  });
+  b.innerHTML=h;
+}
+function stockAuditClose(idx,invId){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الجرد للمدير فقط');
+  var pend=pendingNoNum();var p=pend[idx];if(!p)return;
+  var inv=db.inv.find(function(x){return x.id===invId;});if(!inv)return;
+  var diff=(p.net||0)-(inv.net||0);
+  var diffTxt=Math.abs(diff)<0.001?'مطابق تماماً':(diff>0?('زيادة '+diff.toFixed(3)+' م³'):('عجز '+Math.abs(diff).toFixed(3)+' م³'));
+  if(!confirm('تأكيد: الصف #'+inv.num+' هو اللي اتباع؟\n\nالتكعيب في المخزون: '+(inv.net||0).toFixed(3)+' م³\nالمُباع فعلاً: '+(p.net||0).toFixed(3)+' م³\nالفرق: '+diffTxt+'\n\nهيتقفل الصف ويترّبط بالبيعة.'))return;
+  // اربط سطر البيعة بالصف الحقيقي + اقفل الصف
+  p.lineRef.invId=inv.id;
+  p.lineRef.settled=1;
+  p.lineRef.auditDiff=Math.round(diff*1000)/1000;
+  _logRecut(inv,inv.net,(p.net||0),'audit'); // القديم=تكعيب المخزون، الجديد=المُباع فعلاً
+  inv.avail=0;inv.mt=new Date().toISOString();
+  markInvDirty();recalcInv();dbSave();
+  try{auditLog('جرد: قفل صف مجهول','#'+inv.num+' ('+diffTxt+') — عميل '+(p.cnm||'نقدي'));}catch(e){}
+  dashRender();invRender();stockAuditOpen();
+  showAl('inv-al','✅ اتقفل الصف #'+inv.num+' — '+diffTxt,true);
+}
+function stockAuditForce(idx){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الجرد للمدير فقط');
+  var pend=pendingNoNum();var p=pend[idx];if(!p)return;
+  if(!confirm('تسوية يدوية: الرابطة دي هتتشال من قايمة الجرد من غير ما تقفل صف معين.\n\n(استخدمها لو الصف اتقفل قبل كده أو مش موجود). البيعة تفضل مسجلة زي ما هي.'))return;
+  p.lineRef.settled=1;p.lineRef.forceSettled=1;
+  dbSave();
+  try{auditLog('جرد: تسوية يدوية',p.spec+' — عميل '+(p.cnm||'نقدي'));}catch(e){}
+  dashRender();invRender();stockAuditOpen();
+  showAl('inv-al','✅ اتسوّت الرابطة يدوياً',true);
+}
 function invRender(){
   recalcInv();
   var av=db.inv.filter(function(i){return i.avail>0;});
@@ -2673,6 +2813,18 @@ function invSoldSearch(q){
 
 
 function shipsArrived(){return (db.ships||[]).filter(function(s){return !s.transit;});}
+// كل الرابطات المباعة بالمواصفات اللي لسه محتاجة جرد (pendingInv)
+function pendingNoNum(){
+  var out=[];
+  (db.sales||[]).forEach(function(s){
+    (s.lines||[]).forEach(function(l){
+      if(l.noNum&&l.pendingInv&&!l.settled){
+        out.push({saleId:s.id,cnm:s.cnm,dt:s.dt,spec:l.spec,factory:l.factory,thick:l.thick,len:l.len,pcs:l.pcs,net:l.net,shRef:l.shRef,lineRef:l});
+      }
+    });
+  });
+  return out;
+}
 function _transitShipIds(){var m={};(db.ships||[]).forEach(function(s){if(s.transit)m[s.id]=1;});return m;}
 function isSoldInv(i,trMap){
   // مباعة فعلاً = مش متاحة ومش في شحنة طريق
@@ -2810,7 +2962,11 @@ function shDel(id){if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒
   dbSaveUndo('حذف شحنة');
   var invIds=db.inv.filter(function(i){return i.shId===id;}).map(function(i){return i.id;});
   var soldInv=invIds.filter(function(iid){return db.sales.some(function(s){return (s.lines||[]).some(function(l){return l.invId===iid;});});});
-  var affectedSales=db.sales.filter(function(s){return (s.lines||[]).some(function(l){return invIds.indexOf(l.invId)>=0;});});
+  var _shRef=((db.ships||[]).find(function(s){return s.id===id;})||{}).ref||'';
+  // البيعات المرتبطة: بالصف (invId) أو رابطة مجهولة معلّقة بشحنة مرجعية = دي
+  var affectedSales=db.sales.filter(function(s){return (s.lines||[]).some(function(l){
+    return invIds.indexOf(l.invId)>=0 || (l.noNum&&l.pendingInv&&!l.settled&&_shRef&&l.shRef===_shRef);
+  });});
   var _shX=(db.ships||[]).find(function(s){return s.id===id;});
   var _expX=shipExpenses(id);
   var msg='حذف الشحنة وكل رابطاتها ('+invIds.length+' رابطة)؟';
@@ -2840,7 +2996,7 @@ function shDel(id){if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒
   if(_shRets.length){var _shRetIds=_shRets.map(function(r){return r.id;});db.cashbook=(db.cashbook||[]).filter(function(e){return _shRetIds.indexOf(e.ref)<0;});}
   db.returns=(db.returns||[]).filter(function(r){return !r.lines.some(function(l){return invIds.indexOf(l.invId)>=0;});});
   db.sales.forEach(function(s){
-    var rel=s.lines.some(function(l){return invIds.indexOf(l.invId)>=0;});
+    var rel=s.lines.some(function(l){return invIds.indexOf(l.invId)>=0 || (l.noNum&&l.pendingInv&&!l.settled&&_shRef&&l.shRef===_shRef);});
     if(rel&&s.cid){
       var cu=db.custs.find(function(c){return c.id===s.cid;});
       if(cu){
@@ -2851,7 +3007,7 @@ function shDel(id){if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒
       }
     }
   });
-  db.sales=db.sales.filter(function(s){return !s.lines.some(function(l){return invIds.indexOf(l.invId)>=0;});});
+  db.sales=db.sales.filter(function(s){return !s.lines.some(function(l){return invIds.indexOf(l.invId)>=0 || (l.noNum&&l.pendingInv&&!l.settled&&_shRef&&l.shRef===_shRef);});});
   db.ships=db.ships.filter(function(s){return s.id!==id;});
   db.inv=db.inv.filter(function(i){return i.shId!==id;});
   _releaseClaims(soldInv);
@@ -2986,7 +3142,6 @@ function slCustPick(e){
 function slSearch(q){
   var res=G('sl-res');
   recalcInv();
-  // تحديث الفلاتر
   var avAll=db.inv.filter(function(i){return i.avail>0;});
   var sfSel=G('sl-f-spec');
   if(sfSel){
@@ -3000,28 +3155,63 @@ function slSearch(q){
     var thicks=[...new Set(avAll.map(function(i){return i.thick||38;}))].sort(function(a,b){return a-b;});
     tfSel.innerHTML='<option value="">كل السماكات</option>'+thicks.map(function(t){return '<option value="'+t+'"'+(String(t)===tv?' selected':'')+'>'+t+' mm</option>';}).join('');
   }
+  var pcSel=G('sl-f-pcs');
+  if(pcSel){
+    var pcv=pcSel.value;
+    var pcss=[...new Set(avAll.map(function(i){return i.pcs;}))].filter(Boolean).sort(function(a,b){return a-b;});
+    pcSel.innerHTML='<option value="">كل الأعداد</option>'+pcss.map(function(p){return '<option value="'+p+'"'+(String(p)===pcv?' selected':'')+'>'+p+' لوح</option>';}).join('');
+  }
+  var lnSel=G('sl-f-len');
+  if(lnSel){
+    var lnv=lnSel.value;
+    var lens=[...new Set(avAll.map(function(i){return i.len;}))].filter(Boolean).sort();
+    lnSel.innerHTML='<option value="">كل الأطوال</option>'+lens.map(function(l){return '<option value="'+escAttr(String(l))+'"'+(String(l)===lnv?' selected':'')+'>'+esc(String(l))+'</option>';}).join('');
+  }
   var shSel=G('sl-f-ship');
   if(shSel){
     var shv=shSel.value;
     var ships=[...new Set(avAll.map(function(i){return i.shRef||'';}))].filter(Boolean).sort();
     shSel.innerHTML='<option value="">كل الشحنات</option>'+ships.map(function(s){return '<option value="'+s+'"'+(s===shv?' selected':'')+'>'+s+'</option>';}).join('');
   }
-  // فلترة
   var fSpec=(G('sl-f-spec')||{value:''}).value;
   var fThick=(G('sl-f-thick')||{value:''}).value;
   var fShip=(G('sl-f-ship')||{value:''}).value;
+  var fLen=(G('sl-f-len')||{value:''}).value;
+  var fPcs=(G('sl-f-pcs')||{value:''}).value;
   var selectedIds=(_sl||[]).map(function(l){return l.invId;});
   var av=avAll.filter(function(i){
     if(selectedIds.indexOf(i.id)>=0)return false;
     if(fSpec&&i.spec!==fSpec)return false;
     if(fThick&&String(i.thick||38)!==fThick)return false;
     if(fShip&&i.shRef!==fShip)return false;
+    if(fLen&&String(i.len)!==fLen)return false;
+    if(fPcs&&String(i.pcs)!==fPcs)return false;
     if(q&&q.trim()&&String(i.num).toLowerCase().indexOf(q.toLowerCase().trim())<0)return false;
     return true;
   });
-  if(!q&&!fSpec&&!fThick&&!fShip){res.innerHTML='';return;}
-  if(!av.length){res.innerHTML='<p style="color:#aaa;font-size:0.8rem;padding:5px">لا نتائج</p>';return;}
-  res.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr style="background:var(--pale)">'+
+  if(!q&&!fSpec&&!fThick&&!fShip&&!fLen&&!fPcs){res.innerHTML='';return;}
+  // 🔀 بحث ذكي: أرقام نفس الخانات بترتيب مختلف (للأرقام المتبدّلة زي 457553/457535)
+  var similarHTML='';
+  if(q&&q.trim()&&q.trim().replace(/\D/g,'').length>=3){
+    var qClean=q.trim().replace(/\D/g,'');
+    var qSorted=qClean.split('').sort().join('');
+    var similar=avAll.filter(function(i){
+      if(selectedIds.indexOf(i.id)>=0)return false;
+      var nStr=String(i.num).replace(/\D/g,'');
+      if(nStr===qClean)return false;
+      return nStr.length===qClean.length&&nStr.split('').sort().join('')===qSorted;
+    });
+    if(similar.length){
+      similarHTML='<div style="background:#fff8ec;border:1px solid #f0dcb8;border-radius:8px;padding:8px;margin-bottom:8px">'
+        +'<div style="font-size:0.76rem;font-weight:700;color:#b8792a;margin-bottom:5px">🔀 أرقام شبيهة (نفس الأرقام بترتيب مختلف):</div>'
+        +similar.map(function(inv){return '<div style="display:flex;justify-content:space-between;align-items:center;background:white;border-radius:6px;padding:6px;margin-bottom:3px">'
+          +'<span style="font-size:0.78rem"><b>#'+esc(String(inv.num))+'</b> | '+esc(inv.spec)+' | '+(inv.thick||38)+'mm | '+esc(inv.len)+' | '+fmt(inv.pcs||0)+' لوح | '+inv.net.toFixed(3)+' م³</span>'
+          +'<button class="btn bg_ bs" onclick="slAddFromSearch(\''+inv.id+'\')">+ إضافة</button></div>';}).join('')
+        +'</div>';
+    }
+  }
+  if(!av.length){res.innerHTML=similarHTML+(similarHTML?'':'<p style="color:#aaa;font-size:0.8rem;padding:5px">لا نتائج</p>');return;}
+  res.innerHTML=similarHTML+'<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr style="background:var(--pale)">'+
     '<th style="padding:6px">number</th><th style="padding:6px">spec</th><th style="padding:6px">mm</th><th style="padding:6px">length</th><th style="padding:6px">ألواح</th><th style="padding:6px">م³</th><th></th></tr></thead><tbody>'+
     av.map(function(inv){return '<tr style="border-bottom:1px solid #f0ebe2">'+
       '<td style="padding:6px;text-align:center"><strong>'+inv.num+'</strong></td>'+
@@ -3030,7 +3220,83 @@ function slSearch(q){
       '<td style="padding:6px;text-align:center">'+inv.len+'</td>'+
       '<td style="padding:6px;text-align:center"><strong style="color:var(--gr)">'+fmt(inv.pcs||0)+'</strong></td>'+
       '<td style="padding:6px;text-align:center">'+inv.net.toFixed(3)+'</td>'+
-      '<td style="padding:6px;text-align:center"><button class="btn bg_ bs" onclick="slAddFromSearch(\''+inv.id+'\')">+ إضافة</button></td></tr>';}).join('')+'</tbody></table>';
+      '<td style="padding:6px;text-align:center;white-space:nowrap"><button class="btn bo bs" style="margin-inline-end:2px;padding:3px 6px" onclick="slFixSpec(\''+inv.id+'\')" title="عدّل النوع/الدرجة">✏️ نوع</button><button class="btn bo bs" style="margin-inline-end:2px;padding:3px 6px" onclick="slFixNet(\''+inv.id+'\')" title="صحّح التكعيب">✏️ م³</button><button class="btn bg_ bs" onclick="slAddFromSearch(\''+inv.id+'\')">+ إضافة</button></td></tr>';}).join('')+'</tbody></table>';
+}
+function slFixSpec(invId){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 تعديل النوع للمدير فقط');
+  var inv=db.inv.find(function(x){return x.id===invId;});if(!inv)return;
+  var msg='✏️ تعديل نوع/درجة الرابطة رقم "'+inv.num+'"\n(الحالي: '+inv.spec+' | '+(inv.thick||38)+'mm | طول '+inv.len+')\n\nاكتب النوع/الدرجة الجديدة:';
+  var v=prompt(msg,inv.spec);
+  if(v===null)return;
+  v=v.trim();if(!v)return alert('اكتب النوع');
+  var old=inv.spec;
+  inv.spec=v;inv.mt=new Date().toISOString();
+  markInvDirty();dbSave();
+  try{auditLog('تعديل نوع رابطة','#'+inv.num+': '+old+' → '+v);}catch(e){}
+  slSearch(G('sl-srch')?G('sl-srch').value:'');
+  showAl('sl-al','✅ اتعدّل نوع الرابطة #'+inv.num+' لـ '+v,true);
+}
+function _logRecut(inv,oldNet,newNet,src){
+  if(!db.recutLog)db.recutLog=[];
+  var diff=Math.round((newNet-oldNet)*1000)/1000;
+  db.recutLog.push({
+    id:'rc'+Date.now()+Math.random().toString(36).slice(2,6),
+    dt:todayLocal(),
+    num:String(inv.num||'🏷️'),
+    spec:inv.spec||'',
+    factory:inv.factory||'',
+    thick:inv.thick||38,
+    len:inv.len||'',
+    pcs:inv.pcs||0,
+    oldNet:Math.round(oldNet*1000)/1000,
+    newNet:Math.round(newNet*1000)/1000,
+    diff:diff,
+    src:src, // 'edit' أو 'audit'
+    mt:new Date().toISOString()
+  });
+}
+window.recutClear=function(){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 للمدير فقط');
+  var n=(db.recutLog||[]).length;
+  if(!n)return alert('السجل فاضي أصلاً');
+  if(!confirm('🗑️ تصفية سجل إعادة التكعيب؟\n\nهيتمسح '+n+' سجل. ده بيصفّر تقرير جودة المصانع عشان تبدأ من جديد.\n\n(البيانات دي إحصائية فقط — مش بتأثر على مخزونك أو مبيعاتك).'))return;
+  db.recutLog=[];dbSave();
+  try{auditLog('تصفية سجل إعادة التكعيب',n+' سجل');}catch(e){}
+  reportsRender();
+  showAl('rep-recut-al','✅ اتصفّى السجل — التقرير هيبدأ يتجمّع من جديد',true);
+};
+function slFixNet(invId){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 تعديل التكعيب للمدير فقط');
+  var inv=db.inv.find(function(x){return x.id===invId;});if(!inv)return;
+  var msg='✏️ تصحيح التكعيب للرابطة رقم "'+inv.num+'"\n';
+  msg+='('+inv.spec+' | '+(inv.thick||38)+'mm | طول '+inv.len+' | '+fmt(inv.pcs||0)+' لوح)\n\n';
+  msg+='التكعيب الحالي: '+inv.net.toFixed(3)+' م³\n\nاكتب التكعيب الجديد اللي كعبته:';
+  var v=prompt(msg,inv.net.toFixed(3));
+  if(v===null)return;
+  var nn=parseFloat(v);
+  if(isNaN(nn)||nn<=0)return alert('اكتب رقم صحيح أكبر من صفر');
+  var old=inv.net;
+  // حساب العجز/الزيادة (للمدير فقط — مايظهرش للزبون)
+  var diff=nn-old;
+  var diffTxt=Math.abs(diff)<0.001?'مطابق (مفيش فرق)':(diff>0?('زيادة '+diff.toFixed(3)+' م³ ⬆️'):('عجز '+Math.abs(diff).toFixed(3)+' م³ ⬇️'));
+  _logRecut(inv,old,nn,'edit');
+  inv.net=nn;inv.mt=new Date().toISOString();
+  markInvDirty();dbSave();
+  try{auditLog('تصحيح تكعيب رابطة','#'+inv.num+': '+old.toFixed(3)+' → '+nn.toFixed(3)+' م³ ('+diffTxt+')');}catch(e){}
+  slSearch(G('sl-srch')?G('sl-srch').value:'');
+  // رسالة داخلية بالعجز/الزيادة — تظهر لك بس
+  var diffColor=Math.abs(diff)<0.001?'#1e6b3c':(diff>0?'#1e6b3c':'#c0392b');
+  var box=G('sl-al');
+  if(box){
+    box.style.display='block';
+    box.innerHTML='<div style="background:#f0f9f4;border:2px solid '+diffColor+';border-radius:10px;padding:12px;margin:8px 0">'
+      +'<div style="font-weight:900;color:'+diffColor+';font-size:0.9rem">✅ اتعدّل تكعيب الرابطة #'+esc(String(inv.num))+'</div>'
+      +'<div style="font-size:0.82rem;margin-top:6px;color:#555">القديم: <b>'+old.toFixed(3)+'</b> م³ ← الجديد: <b>'+nn.toFixed(3)+'</b> م³</div>'
+      +'<div style="font-size:0.9rem;margin-top:4px;font-weight:900;color:'+diffColor+'">📊 '+diffTxt+'</div>'
+      +'<div style="font-size:0.72rem;color:#999;margin-top:6px">دلوقتي ضيفها للفاتورة — العميل هيشوف التكعيب الجديد بس</div>'
+      +'</div>';
+    setTimeout(function(){if(box)box.style.display='none';},8000);
+  }
 }
 function slAddFromSearch(invId){
   var ex=_sl.find(function(l){return l.invId===invId;});
@@ -3038,6 +3304,57 @@ function slAddFromSearch(invId){
   slRender();G('sl-srch').value='';G('sl-res').innerHTML='';
 }
 function slAddLine(){_sl.push({invId:'',qty:1,price:0});slRender();}
+function slAddNoNum(){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 للمدير فقط');
+  // نافذة إدخال المواصفات
+  var specs=[...new Set((db.inv||[]).filter(function(i){return i.avail>0;}).map(function(i){return i.spec;}))].sort();
+  var factories=[...new Set((db.inv||[]).map(function(i){return i.factory||'';}).filter(Boolean))].sort();
+  var ships=[...new Set((db.inv||[]).filter(function(i){return i.avail>0;}).map(function(i){return i.shRef||'';}).filter(Boolean))].sort();
+  var m=document.getElementById('nonum-modal');
+  if(!m){
+    m=document.createElement('div');m.id='nonum-modal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    m.innerHTML='<div style="background:white;border-radius:14px;padding:20px;max-width:440px;width:100%;max-height:90vh;overflow:auto">'
+      +'<h3 style="margin:0 0 4px;color:#8e44ad">🏷️ بيع رابطة رقمها ضاع</h3>'
+      +'<p style="font-size:0.76rem;color:#888;margin:0 0 14px">هتتباع بمواصفاتها وتقلّل الإجمالي — وتتقفل من صف معين وقت الجرد</p>'
+      +'<div style="display:grid;gap:10px">'
+      +'<div><label style="font-size:0.8rem;font-weight:700">النوع/الدرجة *</label><input list="nn-specs" id="nn-spec" style="width:100%;padding:8px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"><datalist id="nn-specs">'+specs.map(function(s){return '<option value="'+escAttr(s)+'">';}).join('')+'</datalist></div>'
+      +'<div style="display:flex;gap:8px"><div style="flex:1"><label style="font-size:0.8rem;font-weight:700">المصنع</label><input list="nn-facs" id="nn-fac" style="width:100%;padding:8px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"><datalist id="nn-facs">'+factories.map(function(f){return '<option value="'+escAttr(f)+'">';}).join('')+'</datalist></div>'
+      +'<div style="width:90px"><label style="font-size:0.8rem;font-weight:700">السماكة</label><input id="nn-thick" type="number" value="38" style="width:100%;padding:8px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"></div></div>'
+      +'<div style="display:flex;gap:8px"><div style="flex:1"><label style="font-size:0.8rem;font-weight:700">الطول *</label><input id="nn-len" style="width:100%;padding:8px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"></div>'
+      +'<div style="flex:1"><label style="font-size:0.8rem;font-weight:700">العدد (ألواح) *</label><input id="nn-pcs" type="number" style="width:100%;padding:8px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"></div></div>'
+      +'<div><label style="font-size:0.8rem;font-weight:700">الشحنة (اختياري)</label><select id="nn-ship" style="width:100%;padding:8px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"><option value="">— مش متأكد —</option>'+ships.map(function(s){return '<option value="'+escAttr(s)+'">'+esc(s)+'</option>';}).join('')+'</select></div>'
+      +'<div style="display:flex;gap:8px"><div style="flex:1"><label style="font-size:0.8rem;font-weight:700">التكعيب الجديد م³ *</label><input id="nn-net" type="number" step="0.001" placeholder="0.000" style="width:100%;padding:8px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"></div>'
+      +'<div style="flex:1"><label style="font-size:0.8rem;font-weight:700">السعر/م³ *</label><input id="nn-price" type="number" style="width:100%;padding:8px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"></div></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:16px">'
+      +'<button class="btn bg_" style="flex:1" onclick="slAddNoNumSave()">✅ ضيف للفاتورة</button>'
+      +'<button class="btn bo" onclick="document.getElementById(\'nonum-modal\').style.display=\'none\'">إلغاء</button>'
+      +'</div></div>';
+    document.body.appendChild(m);
+  } else { m.style.display='flex';
+    ['nn-spec','nn-fac','nn-len','nn-pcs','nn-net','nn-price'].forEach(function(id){var e=G(id);if(e)e.value=(id==='nn-thick'?'38':'');});
+    var th=G('nn-thick');if(th)th.value='38';
+  }
+}
+function slAddNoNumSave(){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 للمدير فقط');
+  var spec=(G('nn-spec').value||'').trim();
+  var fac=(G('nn-fac').value||'').trim();
+  var thick=parseFloat(G('nn-thick').value)||38;
+  var len=(G('nn-len').value||'').trim();
+  var pcs=parseInt(G('nn-pcs').value)||0;
+  var ship=(G('nn-ship').value||'').trim();
+  var net=parseFloat(G('nn-net').value)||0;
+  var price=parseFloat(G('nn-price').value)||0;
+  if(!spec||!len||pcs<=0||net<=0||price<=0)return alert('املأ: النوع، الطول، العدد، التكعيب، السعر (كلهم أكبر من صفر)');
+  // سطر بيع بالمواصفات — بدون invId، معلّم noNum
+  _sl.push({invId:'',noNum:1,spec:spec,factory:fac,thick:thick,len:len,pcs:pcs,net:net,shRef:ship,qty:1,price:price});
+  document.getElementById('nonum-modal').style.display='none';
+  slRender();
+  showAl('sl-al','🏷️ اتضافت رابطة "'+spec+'" ('+net.toFixed(3)+' م³) — هتقلّل الإجمالي وتستنى الجرد',true);
+}
+
 function slRender(){
   recalcInv();
   var av=db.inv.filter(function(i){return i.avail>0;});
@@ -3045,13 +3362,15 @@ function slRender(){
   if(!_sl.length){con.innerHTML='<p style="color:#aaa;font-size:0.8rem;text-align:center;padding:10px">ابحث أو اضغط إضافة يدوي</p>';slTotals();return;}
   con.innerHTML=_sl.map(function(l,i){
     var inv=db.inv.find(function(x){return x.id===l.invId;});
-    var m3=inv?inv.net:0,lt=Math.round(m3*(l.price||0));l.qty=1;
+    var m3=l.noNum?(l.net||0):(inv?inv.net:0),lt=Math.round(m3*(l.price||0));l.qty=1;
     return '<div class="slbox">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
         '<div style="flex:1;padding:8px 11px;border:2px solid '+(inv?'#2a7d4f':'#e8ddd0')+';border-radius:8px;font-size:0.82rem;background:'+(inv?'#f0fff4':'#fff8f0')+';min-height:34px;display:flex;align-items:center">'+
-          (inv
+          (l.noNum
+            ?'<span class="bx" style="background:#8e44ad;color:white">🏷️ رقمها ضاع</span>&nbsp;|&nbsp;<span class="bx bxo">'+esc(l.spec)+'</span>&nbsp;|&nbsp;'+(l.thick||38)+'mm&nbsp;|&nbsp;'+esc(l.len)+'&nbsp;|&nbsp;'+fmt(l.pcs||0)+' لوح&nbsp;|&nbsp;<strong style="color:var(--ac)">'+(l.net||0).toFixed(3)+' م³</strong>'+(l.factory?'&nbsp;|&nbsp;'+esc(l.factory):'')
+            :(inv
             ?'<strong>#'+esc(String(inv.num))+'</strong>&nbsp;|&nbsp;<span class="bx bxo">'+esc(inv.spec)+'</span>&nbsp;|&nbsp;'+(inv.thick||38)+'mm&nbsp;|&nbsp;'+esc(inv.len)+'&nbsp;|&nbsp;'+fmt(inv.pcs||0)+' لوح&nbsp;|&nbsp;<strong style="color:var(--ac)">'+inv.net.toFixed(3)+' م³</strong>'
-            :'<span style="color:#aaa;font-size:0.8rem">ابحث برقم الرابطة فوق واضغط + إضافة</span>')+
+            :'<span style="color:#aaa;font-size:0.8rem">ابحث برقم الرابطة فوق واضغط + إضافة</span>'))+
         '</div>'+
         '<button class="btn bd bs" onclick="_sl.splice('+i+',1);slRender()">&#x2715;</button>'+
       '</div>'+
@@ -3070,8 +3389,11 @@ function slRender(){
   slTotals();
 }
 function slTotals(){
-  var tp=_sl.filter(function(l){return l.invId;}).length,tm3=0,grand=0;
-  _sl.forEach(function(l){var inv=db.inv.find(function(x){return x.id===l.invId;});if(inv){tm3+=inv.net;grand+=inv.net*(l.price||0);}});
+  var tp=_sl.filter(function(l){return l.invId||l.noNum;}).length,tm3=0,grand=0;
+  _sl.forEach(function(l){
+    if(l.noNum){tm3+=(l.net||0);grand+=(l.net||0)*(l.price||0);}
+    else{var inv=db.inv.find(function(x){return x.id===l.invId;});if(inv){tm3+=inv.net;grand+=inv.net*(l.price||0);}}
+  });
   // خصم
   var discVal=parseFloat((G('sl-discount')||{}).value)||0;
   var discType=(G('sl-disc-type')||{value:'amt'}).value;
@@ -3092,9 +3414,10 @@ function slTotals(){
 async function slSave(){
   invalidateReminders();
   recalcInv();
-  var vl=_sl.filter(function(l){return l.invId&&l.qty>0;});
+  var vl=_sl.filter(function(l){return (l.invId||l.noNum)&&l.qty>0;});
   if(!vl.length)return showAl('sl-al','يرجى اختيار رابطة وكمية',false);
   for(var si=0;si<vl.length;si++){
+    if(vl[si].noNum)continue;
     var chk=db.inv.find(function(x){return x.id===vl[si].invId;});
     if(!chk)return showAl('sl-al','رابطة غير موجودة',false);
     if(chk.avail<1)return showAl('sl-al','الرابطة مباعة بالفعل: '+chk.num,false);
@@ -3106,6 +3429,11 @@ async function slSave(){
   if(pay==='آجل'&&!custId)return showAl('sl-al','⚠️ البيع الآجل لازم يتسجل على عميل — اختار عميل من البحث أو أضف عميل جديد',false);
   var tp=0,tm3=0,grand=0,saleLines=[];
   vl.forEach(function(l){
+    if(l.noNum){
+      tp+=(l.pcs||0);tm3+=(l.net||0);grand+=(l.net||0)*(l.price||0);
+      saleLines.push({invId:'',noNum:1,spec:l.spec,factory:l.factory||'',thick:l.thick||38,len:l.len,pcs:l.pcs||0,net:l.net||0,shRef:l.shRef||'',qty:1,price:l.price||0,pendingInv:1});
+      return;
+    }
     var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
     tp+=(inv.pcs||0);tm3+=inv.net;grand+=inv.net*(l.price||0);
     saleLines.push({invId:l.invId,qty:l.qty,price:l.price||0});
@@ -3119,7 +3447,7 @@ async function slSave(){
   // 🛡️ منع البيع المزدوج: احجز الرابطات على السيرفر قبل أي حفظ
   if(navigator.onLine&&typeof _claimBundles==='function'){
     try{
-      var _lost=await _claimBundles(vl.map(function(l){return l.invId;}),saleId);
+      var _lost=await _claimBundles(vl.filter(function(l){return l.invId;}).map(function(l){return l.invId;}),saleId);
       if(_lost.length){
         var _ln=_lost.map(function(iid){var iv=db.inv.find(function(x){return x.id===iid;});return iv?('#'+iv.num+' '+iv.spec):iid;}).join('، ');
         showAl('sl-al','⛔ اتباعت للتو من جهاز تاني: '+_ln+' — شيلها من الفاتورة وكمّل الباقي',false);
@@ -3134,14 +3462,18 @@ async function slSave(){
     if(cu){
       if(!cu.payments)cu.payments=[];
       cu.total=(cu.total||0)+fp;
-      if(pay!=='آجل')cu.payments.push({id:'px'+saleId,dt:dt,amt:fp,type:'pay',method:pay,note:pay});
+      if(pay!=='آجل'){
+        var _pf=applyPayFee(fp,pay);
+        cu.payments.push({id:'px'+saleId,dt:dt,amt:_pf.net,type:'pay',method:pay,note:pay+(_pf.fee>0?(' (بعد عمولة '+_pf.pct+'% = '+fmt(_pf.fee)+' ج)'):'')});
+      }
       cu.debt=cuCalcDebt(cu);
     }
   }
   recalcInv();
   // تسجيل في اليومية لو مش آجل ومش شيك (الشيك بيتسجل لما يتحصل)
   if(pay!=='آجل'&&pay!=='شيك'){
-    cbAutoLog(fp,pay,'بيعة: '+custNm,dt,false,saleId);
+    var _pfL=applyPayFee(fp,pay);
+    cbAutoLog(_pfL.net,pay,'بيعة: '+custNm+(_pfL.fee>0?(' (خصم عمولة '+_pfL.pct+'%)'):''),dt,false,saleId);
   }
   // تسجيل شيك لو طريقة الدفع شيك
   if(pay==='شيك'){
@@ -3179,23 +3511,26 @@ function slPrint(saleId){
   var rows='',totalM3=0,totalPcs=0,totalVal=0;
   var printGroups={};
   (s.lines||[]).forEach(function(l){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
-    var val=Math.round(inv.net*(l.price||0));
-    totalM3+=inv.net;totalPcs+=(inv.pcs||0);totalVal+=val;
+    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    // السطر بالمواصفات (رقمها ضاع) — نستخدم بياناته المخزّنة
+    var d=l.noNum?{spec:l.spec,thick:l.thick||38,len:l.len,pcs:l.pcs||0,net:l.net||0,num:'🏷️'}
+             :(inv?{spec:inv.spec,thick:inv.thick||38,len:inv.len,pcs:inv.pcs||0,net:inv.net,num:inv.num}:null);
+    if(!d)return;
+    var val=Math.round(d.net*(l.price||0));
+    totalM3+=d.net;totalPcs+=d.pcs;totalVal+=val;
     rows+='<tr>'
-      +'<td>'+inv.spec.toUpperCase()+'</td>'
-      +'<td>#'+inv.num+'</td>'
-      +'<td>'+(inv.thick||38)+'mm</td>'
-      +'<td>'+inv.len+'</td>'
-      +'<td>'+fmt(inv.pcs||0)+'</td>'
-      +'<td>'+inv.net.toFixed(3)+'</td>'
+      +'<td>'+String(d.spec).toUpperCase()+'</td>'
+      +'<td>'+(d.num==='—'?'🏷️':'#'+d.num)+'</td>'
+      +'<td>'+d.thick+'mm</td>'
+      +'<td>'+d.len+'</td>'
+      +'<td>'+fmt(d.pcs)+'</td>'
+      +'<td>'+d.net.toFixed(3)+'</td>'
       +'<td>'+fmt(l.price||0)+'</td>'
       +'<td><strong>'+fmt(val)+'</strong></td>'
     +'</tr>';
-    // تجميع للملخص
-    var gk=inv.spec+'|'+(inv.thick||38)+'|'+(l.price||0);
-    if(!printGroups[gk])printGroups[gk]={spec:inv.spec,thick:inv.thick||38,price:l.price||0,cnt:0,m3:0,pcs:0,val:0};
-    printGroups[gk].cnt++;printGroups[gk].m3+=inv.net;printGroups[gk].pcs+=(inv.pcs||0);printGroups[gk].val+=val;
+    var gk=d.spec+'|'+d.thick+'|'+(l.price||0);
+    if(!printGroups[gk])printGroups[gk]={spec:d.spec,thick:d.thick,price:l.price||0,cnt:0,m3:0,pcs:0,val:0};
+    printGroups[gk].cnt++;printGroups[gk].m3+=d.net;printGroups[gk].pcs+=d.pcs;printGroups[gk].val+=val;
   });
   // إضافة صفوف ملخص لكل صنف + إجمالي بالدرجة
   var pgVals=Object.values(printGroups);
@@ -3541,6 +3876,10 @@ function seCustPick(id,nm){
 function saleEditOpen(saleId){
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
   var s=db.sales.find(function(x){return x.id===saleId;});if(!s)return;
+  // لو فيها رابطة مباعة بالمواصفات لسه معلّقة (مش متجرد) — منع التعديل لحد الجرد
+  if((s.lines||[]).some(function(l){return l.noNum&&l.pendingInv&&!l.settled;})){
+    return alert('⚠️ الفاتورة دي فيها رابطة "رقمها ضاع" لسه في انتظار الجرد.\n\nاعمل الجرد الأول (اقفل صفها من صفحة المخزون)، وبعدين تقدر تعدّل الفاتورة.');
+  }
   _seId=saleId;
   G('se-cust').value=s.cnm||'';
   if(G('se-cust-id'))G('se-cust-id').value=s.cid||'';
@@ -3551,9 +3890,11 @@ function saleEditOpen(saleId){
   // بناء سطور الأسعار
   var html='';
   (s.lines||[]).forEach(function(l,i){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
+    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var _d=l.noNum?{num:'🏷️',spec:l.spec,thick:l.thick||38,pcs:l.pcs||0,net:l.net||0}:(inv?{num:'#'+inv.num,spec:inv.spec,thick:inv.thick||38,pcs:inv.pcs||0,net:inv.net}:null);
+    if(!_d)return;
     html+='<div id="se-row-'+i+'" style="display:flex;align-items:center;gap:8px;padding:7px;background:#f9f5f0;border-radius:8px;margin-bottom:6px">'+
-      '<div style="flex:1;font-size:0.78rem"><strong>#'+inv.num+'</strong> '+inv.spec+' '+(inv.thick||38)+'mm | '+fmt(inv.pcs||0)+' لوح | '+inv.net.toFixed(3)+' م³</div>'+
+      '<div style="flex:1;font-size:0.78rem"><strong>'+_d.num+'</strong> '+_d.spec+' '+_d.thick+'mm | '+fmt(_d.pcs)+' لوح | '+_d.net.toFixed(3)+' م³</div>'+
       '<div style="display:flex;align-items:center;gap:5px">'+
         '<span style="font-size:0.72rem;color:#888">ج/م³</span>'+
         '<input type="text" id="se-p-'+i+'" value="'+(l.price||0)+'" oninput="seCalcTotal()"'+
@@ -3582,9 +3923,11 @@ function seCalcTotal(){
   var s=db.sales.find(function(x){return x.id===_seId;});if(!s)return;
   var total=0;
   (s.lines||[]).forEach(function(l,i){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
+    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var _net=l.noNum?(l.net||0):(inv?inv.net:null);
+    if(_net===null)return;
     var p=parseFloat((G('se-p-'+i)||{value:0}).value)||0;
-    total+=inv.net*p;
+    total+=_net*p;
   });
   var dv=parseFloat((G('se-discount')||{value:0}).value)||0;
   var dt=(G('se-disc-type')||{value:'amt'}).value;
@@ -3628,10 +3971,12 @@ function saleEditSave(){
   // تحديث الأسعار
   var total=0;
   (s.lines||[]).forEach(function(l,i){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
+    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var _net=l.noNum?(l.net||0):(inv?inv.net:null);
+    if(_net===null)return;
     var p=parseFloat((G('se-p-'+i)||{value:l.price}).value)||0;
     l.price=p;
-    total+=inv.net*p;
+    total+=_net*p;
   });
   var dv=parseFloat((G('se-discount')||{value:0}).value)||0;
   var dt=(G('se-disc-type')||{value:'amt'}).value;
@@ -3645,8 +3990,11 @@ function saleEditSave(){
   // تحديث tp و tm3
   var newTp=0,newTm3=0;
   (s.lines||[]).forEach(function(l){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
-    newTp+=(inv.pcs||0);newTm3+=inv.net;
+    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var _net=l.noNum?(l.net||0):(inv?inv.net:null);
+    var _pcs=l.noNum?(l.pcs||0):(inv?(inv.pcs||0):0);
+    if(_net===null)return;
+    newTp+=_pcs;newTm3+=_net;
   });
   s.tp=newTp;s.tm3=newTm3;
   // تحديث حساب العميل الجديد (s.cid دلوقتي بقا فيه العميل الجديد)
@@ -3735,10 +4083,13 @@ function saleWaSend(saleId,mode){
     ln.push('');
     ln.push('*تفاصيل الرابطات:*');
     (s.lines||[]).forEach(function(l,i){
-      var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
-      var val=Math.round(inv.net*(l.price||0));
-      ln.push((i+1)+'. #'+inv.num+' | '+inv.spec+' | '+(inv.thick||38)+'mm | '+inv.len);
-      ln.push('   م³: '+inv.net.toFixed(3)+' | سعر: '+fmt(l.price||0)+' ج/م³ | *'+fmt(val)+' ج*');
+      var inv=db.inv.find(function(x){return x.id===l.invId;});
+      var d=l.noNum?{spec:l.spec,thick:l.thick||38,len:l.len,net:l.net||0,num:'🏷️'}
+               :(inv?{spec:inv.spec,thick:inv.thick||38,len:inv.len,net:inv.net,num:'#'+inv.num}:null);
+      if(!d)return;
+      var val=Math.round(d.net*(l.price||0));
+      ln.push((i+1)+'. '+d.num+' | '+d.spec+' | '+d.thick+'mm | '+d.len);
+      ln.push('   م³: '+d.net.toFixed(3)+' | سعر: '+fmt(l.price||0)+' ج/م³ | *'+fmt(val)+' ج*');
     });
   } else {
     ln.push('عدد الرابطات: '+( s.lines?s.lines.length:0)+' | م³: '+s.tm3.toFixed(3));
@@ -3790,6 +4141,10 @@ function retOpen(saleId){
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
   var s=db.sales.find(function(x){return x.id===saleId;});
   if(!s||s.returned)return;
+  // لو فيها رابطة مباعة بالمواصفات لسه معلّقة — منع المرتجع لحد الجرد
+  if((s.lines||[]).some(function(l){return l.noNum&&l.pendingInv&&!l.settled;})){
+    return alert('⚠️ الفاتورة دي فيها رابطة "رقمها ضاع" لسه في انتظار الجرد.\n\nاعمل الجرد الأول، وبعدين تقدر تعمل مرتجع.');
+  }
   _retSaleId=saleId;_retChecks={};
   G('ret-info').textContent='فاتورة: '+s.dt+' | '+s.cnm+' | '+fmt(s.price)+' ج';
   G('ret-dt').value=todayLocal();G('ret-note').value='';
@@ -3814,9 +4169,13 @@ function retSave(){
   var retLines=[],totalRefund=0,totalPcs=0;
   sel.forEach(function(invId){
     var l=s.lines.find(function(x){return x.invId===invId;});
-    var inv=db.inv.find(function(x){return x.id===invId;});if(!l||!inv)return;
+    var inv=db.inv.find(function(x){return x.id===invId;});if(!l)return;
+    // الرابطة المجهولة: التكعيب المُباع من السطر؛ العادية: من الصف
+    var _net=l.noNum?(l.net||0):(inv?inv.net:0);
+    var _pcs=l.noNum?(l.pcs||0):(inv?(inv.pcs||0):0);
+    if(!l.noNum&&!inv)return;
     var qty=Math.min(parseInt(G('rq_'+invId).value)||l.qty,l.qty);
-    totalRefund+=inv.net*(l.price||0);totalPcs+=(inv.pcs||0);
+    totalRefund+=_net*(l.price||0);totalPcs+=_pcs;
     retLines.push({invId:invId,qty:qty,price:l.price||0});
   });
   var discFactor=(s.grandBefore&&s.grandBefore>0)?((s.price||0)/s.grandBefore):1;
@@ -3839,7 +4198,13 @@ function retSave(){
       // لو البيعة كانت مدفوعة (مش آجل): قلّل/شيل الدفعة الأصلية بمقدار المرتجع عشان حساب العميل ما يبقاش بالسالب
       if(s.pay!=='آجل'&&cu.payments){
         var _pxp=cu.payments.find(function(p){return p.id==='px'+s.id;});
-        if(_pxp){_pxp.amt=(_pxp.amt||0)-fp;if(_pxp.amt<=0){trackDelete('px'+s.id);cu.payments=cu.payments.filter(function(p){return p!==_pxp;});}}
+        if(_pxp){
+          // المرتجع يقلّل الدفعة بنسبة الصافي للإجمالي (عشان العمولة): لو الدفعة كانت صافية بعد عمولة، الاسترداد يقلّلها بنفس النسبة
+          var _refFactor=(s.price&&s.price>0)?(fp/s.price):0; // نسبة المرتجع للفاتورة
+          var _payReduce=Math.round((_pxp.amt||0)*_refFactor);
+          _pxp.amt=(_pxp.amt||0)-_payReduce;
+          if(_pxp.amt<=0){trackDelete('px'+s.id);cu.payments=cu.payments.filter(function(p){return p!==_pxp;});}
+        }
       }
       cu.debt=cuCalcDebt(cu);
     }
@@ -3848,8 +4213,11 @@ function retSave(){
   if(s.pay&&s.pay!=='آجل'&&fp>0&&!_pendChq){
     var rm2={'كاش':'cash','بنك تنمية الصادرات':'bank1','بنك سايب':'bank2','فودافون محمد':'voda1','فودافون إبراهيم':'voda2','فودافون طارق':'voda3','إنستا باي محمد':'insta1','إنستا باي إبراهيم':'insta2','محفظة بنك القاهرة':'wallet','شيك':'check','فودافون كاش':'voda1','إنستا باي':'insta1','تحويل بنكي':'bank1'};
     var mret=rm2[s.pay]||'cash';
+    // لو طريقة الدفع فيها عمولة: اللي دخل الخزنة أصلاً كان الصافي، فالمرتجع يطلّع الصافي المطابق
+    var _retNet=fp;
+    if(typeof payFeePct==='function'){var _fpct=payFeePct(s.pay);if(_fpct>0)_retNet=Math.round(fp*(1-_fpct/100));}
     if(!db.cashbook)db.cashbook=[];
-    db.cashbook.push({id:'cbr'+Date.now(),dt:retDt,tp:'out',m:mret,m2:'',amt:fp,desc:'مرتجع: '+s.cnm,auto:true,ref:_retId});
+    db.cashbook.push({id:'cbr'+Date.now(),dt:retDt,tp:'out',m:mret,m2:'',amt:_retNet,desc:'مرتجع: '+s.cnm,auto:true,ref:_retId});
   }
   _releaseClaims(retLines.map(function(l){return l.invId;}));
   recalcInv();dbSave();G('ret-modal').style.display='none';
@@ -4062,6 +4430,15 @@ function _saleDetHTML(ref){
   }
   return det;
 }
+function _invMap(){
+  // خريطة سريعة للمخزون (id → رابطة) — أسرع بكتير من find جوه الحلقات
+  if(!window.__invMapCache||window.__invMapVer!==(db.inv||[]).length){
+    var m={};(db.inv||[]).forEach(function(i){m[i.id]=i;});
+    window.__invMapCache=m;window.__invMapVer=(db.inv||[]).length;
+  }
+  return window.__invMapCache;
+}
+function _invalidateInvMap(){window.__invMapCache=null;}
 function cuOpen(id){
   var c=db.custs.find(function(x){return x.id===id;});if(!c)return;
   _cuId=id;if(!c.payments)c.payments=[];
@@ -4173,7 +4550,7 @@ function cuOpen(id){
   }).join(''):'<tr><td colspan="6" style="color:#aaa;padding:20px;text-align:center">لا توجد حركات</td></tr>';
   // أنواع الخشب
   var wm={};
-  sl.forEach(function(s){(s.lines||[]).forEach(function(l){var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;var k=inv.spec+'__'+(inv.thick||38);if(!wm[k])wm[k]={spec:inv.spec,thick:inv.thick||38,cnt:0,m3:0,val:0};wm[k].cnt+=l.qty||1;wm[k].m3+=inv.net*(l.qty||1);wm[k].val+=inv.net*(l.price||0)*(l.qty||1);});});
+  var _im=_invMap();sl.forEach(function(s){(s.lines||[]).forEach(function(l){var inv=_im[l.invId];var d=l.noNum?{spec:l.spec,thick:l.thick||38,net:l.net||0}:(inv?{spec:inv.spec,thick:inv.thick||38,net:inv.net}:null);if(!d)return;var k=d.spec+'__'+(d.thick||38);if(!wm[k])wm[k]={spec:d.spec,thick:d.thick||38,cnt:0,m3:0,val:0};wm[k].cnt+=l.qty||1;wm[k].m3+=(d.net||0)*(l.qty||1);wm[k].val+=(d.net||0)*(l.price||0)*(l.qty||1);});});
   G('cp-wood').innerHTML=Object.values(wm).map(function(w){return '<tr><td><span class="bx bxo">'+w.spec+'</span></td><td>'+w.thick+' mm</td><td>'+fmt(w.cnt)+'</td><td>'+w.m3.toFixed(3)+'</td><td><strong>'+fmt(Math.round(w.val))+' ج</strong></td></tr>';}).join('')||'<tr><td colspan="5" style="color:#aaa;padding:12px">لا بيانات</td></tr>';
   G('cu-profile').style.display='block';G('cu-profile').scrollIntoView({behavior:'smooth'});
 }
@@ -4295,8 +4672,10 @@ function cuWaSend(mode){
       if(e.type==='sale'){
         lines.push('🛒 *مبيعة* — '+e.dt+' | '+e.ref.pay);
         (e.ref.lines||[]).forEach(function(l){
-          var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
-          lines.push('  • '+inv.spec.toUpperCase()+' #'+inv.num+' | '+inv.net.toFixed(3)+'م³ | '+fmt(l.price||0)+' ج/م³ = *'+fmt(Math.round(inv.net*(l.price||0)))+' ج*');
+          var inv=db.inv.find(function(x){return x.id===l.invId;});
+          var d=l.noNum?{spec:l.spec,net:l.net||0,num:'🏷️'}:(inv?{spec:inv.spec,net:inv.net,num:'#'+inv.num}:null);if(!d)return;
+          var nm=inv?('#'+inv.num):'🏷️';
+          lines.push('  • '+String(d.spec).toUpperCase()+' '+nm+' | '+(d.net||0).toFixed(3)+'م³ | '+fmt(l.price||0)+' ج/م³ = *'+fmt(Math.round((d.net||0)*(l.price||0)))+' ج*');
         });
         lines.push('  إجمالي: *'+fmt(Math.round(e.amt))+' ج*');
       } else if(e.type==='pay'){
@@ -4338,8 +4717,11 @@ function cuWaSend(mode){
         lines.push('');
         lines.push('  فاتورة '+(si+1)+' — '+s.dt+' | '+s.pay);
         (s.lines||[]).forEach(function(l){
-          var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
-          lines.push('    • '+inv.spec.toUpperCase()+' #'+inv.num+' | '+(inv.thick||38)+'mm | '+inv.len+' | '+fmt(inv.pcs||0)+' لوح | '+inv.net.toFixed(3)+'م³ | '+fmt(l.price||0)+' ج/م³ = *'+fmt(Math.round(inv.net*(l.price||0)))+' ج*');
+          var inv=db.inv.find(function(x){return x.id===l.invId;});
+          var d=l.noNum?{spec:l.spec,thick:l.thick||38,len:l.len,pcs:l.pcs||0,net:l.net||0,num:'🏷️'}
+                   :(inv?{spec:inv.spec,thick:inv.thick||38,len:inv.len,pcs:inv.pcs||0,net:inv.net,num:'#'+inv.num}:null);
+          if(!d)return;
+          lines.push('    • '+String(d.spec).toUpperCase()+' '+d.num+' | '+d.thick+'mm | '+d.len+' | '+fmt(d.pcs)+' لوح | '+d.net.toFixed(3)+'م³ | '+fmt(l.price||0)+' ج/م³ = *'+fmt(Math.round(d.net*(l.price||0)))+' ج*');
         });
         lines.push('  — إجمالي: *'+fmt(Math.round(s.price||0))+' ج*');
       });
@@ -4460,7 +4842,10 @@ function cuPrint(printMode,prFrom,prTo){
     if(!bundles.length)return;
     var firstRow=true;
     bundles.forEach(function(l){
-      var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
+      var inv=db.inv.find(function(x){return x.id===l.invId;});
+      var _d=l.noNum?{spec:l.spec,thick:l.thick||38,len:l.len,pcs:l.pcs||0,net:l.net||0,num:'🏷️'}:(inv?{spec:inv.spec,thick:inv.thick||38,len:inv.len,pcs:inv.pcs||0,net:inv.net,num:'#'+inv.num}:null);
+      if(!_d)return;
+      var inv=_d; // بديل موحّد للعرض
       saleRows+='<tr style="'+(si%2===0?'background:#fffdf8':'background:#fff')+'">';
       if(firstRow){
         saleRows+='<td rowspan="'+bundles.length+'" style="padding:7px 10px;border:1px solid #e0d5c5;vertical-align:top;font-size:0.8rem;white-space:nowrap">'+s.dt+'<br><span style="font-size:0.7rem;background:'+(s.pay==='\u0643\u0627\u0634'?'#d4edda':s.pay==='\u0622\u062C\u0644'?'#fdecea':'#d1ecf1')+';color:'+(s.pay==='\u0643\u0627\u0634'?'#1e6b3c':s.pay==='\u0622\u062C\u0644'?'#c0392b':'#1a5276')+';padding:1px 5px;border-radius:4px">'+s.pay+'</span></td>';
@@ -4709,7 +5094,8 @@ function cuPaySave(){if(typeof isAdmin==='function'&&!isAdmin())return alert('�
   if(!c.payments)c.payments=[];
   var payDt=G('pay-dt').value,payMeth=G('pay-method').value,payNote=G('pay-note').value;
   var payId='py'+Date.now();
-  c.payments.push({id:payId,dt:payDt,amt:amt,type:'pay',method:payMeth,note:payNote});
+  var _pfp=applyPayFee(amt,payMeth);
+  c.payments.push({id:payId,dt:payDt,amt:_pfp.net,type:'pay',method:payMeth,note:payNote+(_pfp.fee>0?((payNote?' ':'')+'(بعد عمولة '+_pfp.pct+'% = '+fmt(_pfp.fee)+' ج، الأصل '+fmt(amt)+')'):'')});
   // لو شيك — سجله في db.cheques
   if(payMeth==='شيك'){
     var chqDue=((G('pay-chq-due')||{}).value)||payDt;
@@ -4719,7 +5105,8 @@ function cuPaySave(){if(typeof isAdmin==='function'&&!isAdmin())return alert('�
     db.cheques.push({id:'chq'+Date.now(),cid:_cuId,cnm:c.nm,amt:amt,dt:payDt,due:chqDue,status:'pending',holder:chqHolder||c.nm,note:chqNote,payId:payId});
     // الشيك مبيتسجلش في اليومية — بيتسجل لما يتحصل
   }else{
-    cbAutoLog(amt,payMeth,'دفعة: '+c.nm+(payNote?' - '+payNote:''),payDt,false,payId);
+    var _pfd=applyPayFee(amt,payMeth);
+    cbAutoLog(_pfd.net,payMeth,'دفعة: '+c.nm+(payNote?' - '+payNote:'')+(_pfd.fee>0?(' (خصم عمولة '+_pfd.pct+'%)'):''),payDt,false,payId);
   }
   c.debt=cuCalcDebt(c);dbSave();G('pay-modal').style.display='none';cuOpen(_cuId);cuRender();
 }
@@ -5233,7 +5620,122 @@ function findDupBundles(){
   h+='</div>';
   el.innerHTML=h;
 }
+function recutReport(){
+  var box=G('rep-recut');if(!box)return;
+  var log=db.recutLog||[];
+  if(!log.length){box.innerHTML='<p style="color:#aaa;font-size:0.85rem;padding:8px">لسه مفيش رابطات معاد تكعيبها. كل ما تعدّل تكعيب رابطة (بزر ✏️ م³ أو في الجرد) هتظهر هنا مجمّعة بالمصنع.</p>';return;}
+  // تجميع بالمصنع
+  var byFac={};
+  log.forEach(function(r){
+    var f=r.factory||'(بدون مصنع)';
+    if(!byFac[f])byFac[f]={cnt:0,totalDiff:0,deficit:0,surplus:0,items:[]};
+    byFac[f].cnt++;
+    byFac[f].totalDiff+=(r.diff||0);
+    if(r.diff<0)byFac[f].deficit+=Math.abs(r.diff);
+    else if(r.diff>0)byFac[f].surplus+=r.diff;
+    byFac[f].items.push(r);
+  });
+  // ترتيب المصانع: الأسوأ أولاً (الأكثر عجزاً — أصغر متوسط)
+  var facs=Object.keys(byFac).sort(function(a,b){
+    return (byFac[a].totalDiff/byFac[a].cnt)-(byFac[b].totalDiff/byFac[b].cnt);
+  });
+  var h='<p style="font-size:0.78rem;color:#888;margin:0 0 12px">📉 مرتّبة من الأسوأ (أكتر عجز) للأحسن. العجز = التكعيب الجديد أقل من المسجّل (المصنع بيبالغ). الزيادة = العكس.</p>';
+  facs.forEach(function(f){
+    var d=byFac[f];
+    var avg=d.totalDiff/d.cnt;
+    var avgTxt=Math.abs(avg)<0.001?'مظبوط':(avg<0?('عجز '+Math.abs(avg).toFixed(3)+'/رابطة'):('زيادة '+avg.toFixed(3)+'/رابطة'));
+    var badge=avg<-0.05?'🔴':(avg<-0.01?'🟠':(Math.abs(avg)<=0.01?'🟢':'🔵'));
+    var headColor=avg<-0.05?'#c0392b':(avg<-0.01?'#d4812a':(Math.abs(avg)<=0.01?'#1e6b3c':'#2c5d8a'));
+    h+='<div style="border:1px solid #e8ddd0;border-radius:10px;margin-bottom:10px;overflow:hidden">'
+      +'<div style="background:#faf7f2;padding:10px 12px;border-bottom:1px solid #eee">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
+      +'<b style="font-size:0.95rem;color:'+headColor+'">'+badge+' '+esc(f)+'</b>'
+      +'<span style="font-size:0.82rem;font-weight:900;color:'+headColor+'">'+avgTxt+'</span></div>'
+      +'<div style="font-size:0.74rem;color:#777;margin-top:4px">'+d.cnt+' رابطة | إجمالي عجز: <b style="color:#c0392b">'+d.deficit.toFixed(3)+'</b> م³ | إجمالي زيادة: <b style="color:#1e6b3c">'+d.surplus.toFixed(3)+'</b> م³ | صافي: <b>'+(d.totalDiff>=0?'+':'')+d.totalDiff.toFixed(3)+'</b> م³</div>'
+      +'</div>';
+    // تفاصيل كل رابطة
+    h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.75rem">'
+      +'<thead><tr style="background:#f5f0e8"><th style="padding:5px">التاريخ</th><th style="padding:5px">الرقم</th><th style="padding:5px">النوع</th><th style="padding:5px">الطول</th><th style="padding:5px">قديم</th><th style="padding:5px">جديد</th><th style="padding:5px">الفرق</th><th style="padding:5px">المصدر</th></tr></thead><tbody>';
+    d.items.slice().reverse().forEach(function(r){
+      var dc=r.diff<-0.001?'#c0392b':(r.diff>0.001?'#1e6b3c':'#888');
+      var dt2=r.diff<-0.001?('عجز '+Math.abs(r.diff).toFixed(3)):(r.diff>0.001?('+'+r.diff.toFixed(3)):'مطابق');
+      h+='<tr style="border-bottom:1px solid #f5f0e8">'
+        +'<td style="padding:5px;text-align:center;color:#999;white-space:nowrap">'+r.dt+'</td>'
+        +'<td style="padding:5px;text-align:center"><b>'+(r.num==='🏷️'?'🏷️':'#'+esc(r.num))+'</b></td>'
+        +'<td style="padding:5px;text-align:center">'+esc(r.spec)+'</td>'
+        +'<td style="padding:5px;text-align:center">'+esc(String(r.len))+'</td>'
+        +'<td style="padding:5px;text-align:center;color:#999">'+(r.oldNet||0).toFixed(3)+'</td>'
+        +'<td style="padding:5px;text-align:center;font-weight:700">'+(r.newNet||0).toFixed(3)+'</td>'
+        +'<td style="padding:5px;text-align:center;font-weight:900;color:'+dc+'">'+dt2+'</td>'
+        +'<td style="padding:5px;text-align:center;font-size:0.68rem;color:#999">'+(r.src==='audit'?'🏷️ جرد':'✏️ تعديل')+'</td>'
+        +'</tr>';
+    });
+    h+='</tbody></table></div></div>';
+  });
+  box.innerHTML=h;
+}
+function yearlyStatsRender(){
+  var box=G('rep-yearly');if(!box)return;
+  var years={};
+  // المشتريات: من الشحنات الواصلة (بالمتر والقطع — الفلوس مش مسجلة وقت الشراء)
+  (db.ships||[]).forEach(function(sh){
+    if(sh.transit)return; // في الطريق لسه
+    var y=(sh.dt||'').slice(0,4);if(!y)return;
+    if(!years[y])years[y]={buyM3:0,buyPcs:0,buyExp:0,sellM3:0,sellPcs:0,sellVal:0};
+    years[y].buyM3+=(sh.tn||0);
+    years[y].buyPcs+=(sh.tp||0);
+    years[y].buyExp+=shipExpenses(sh.id); // مصاريف الرسالة (شحن/جمارك)
+  });
+  // المبيعات: من الفواتير
+  (db.sales||[]).forEach(function(s){
+    var y=(s.dt||'').slice(0,4);if(!y)return;
+    if(!years[y])years[y]={buyM3:0,buyPcs:0,buyExp:0,sellM3:0,sellPcs:0,sellVal:0};
+    years[y].sellM3+=(s.tm3||0);
+    years[y].sellPcs+=(s.tp||0);
+    years[y].sellVal+=(s.price||0);
+  });
+  var yrs=Object.keys(years).sort().reverse();
+  if(!yrs.length){box.innerHTML='<p style="color:#aaa;font-size:0.85rem;padding:8px">لا توجد بيانات بعد</p>';return;}
+  var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.82rem">'
+    +'<thead><tr style="background:var(--pale)">'
+    +'<th style="padding:8px">السنة</th>'
+    +'<th style="padding:8px;color:#1e6b3c">📥 مشتريات م³</th>'
+    +'<th style="padding:8px;color:#1e6b3c">مشتريات قطع</th>'
+    +'<th style="padding:8px;color:#c0392b">📤 مبيعات م³</th>'
+    +'<th style="padding:8px;color:#c0392b">مبيعات قطع</th>'
+    +'<th style="padding:8px;color:#c0392b">💰 قيمة المبيعات</th>'
+    +'<th style="padding:8px;color:#b8792a">مصاريف الرسائل</th>'
+    +'</tr></thead><tbody>';
+  var tot={buyM3:0,buyPcs:0,buyExp:0,sellM3:0,sellPcs:0,sellVal:0};
+  yrs.forEach(function(y){
+    var d=years[y];
+    tot.buyM3+=d.buyM3;tot.buyPcs+=d.buyPcs;tot.buyExp+=d.buyExp;
+    tot.sellM3+=d.sellM3;tot.sellPcs+=d.sellPcs;tot.sellVal+=d.sellVal;
+    h+='<tr style="border-bottom:1px solid #f0ebe2">'
+      +'<td style="padding:8px;text-align:center;font-weight:900;font-size:0.95rem">'+y+'</td>'
+      +'<td style="padding:8px;text-align:center;font-weight:700;color:#1e6b3c">'+d.buyM3.toFixed(2)+'</td>'
+      +'<td style="padding:8px;text-align:center">'+fmt(d.buyPcs)+'</td>'
+      +'<td style="padding:8px;text-align:center;font-weight:700;color:#c0392b">'+d.sellM3.toFixed(2)+'</td>'
+      +'<td style="padding:8px;text-align:center">'+fmt(d.sellPcs)+'</td>'
+      +'<td style="padding:8px;text-align:center;font-weight:900;color:#c0392b">'+fmt(Math.round(d.sellVal))+' ج</td>'
+      +'<td style="padding:8px;text-align:center;color:#b8792a">'+fmt(Math.round(d.buyExp))+' ج</td>'
+      +'</tr>';
+  });
+  h+='</tbody><tfoot><tr style="background:var(--cr);font-weight:900;border-top:2px solid var(--dk)">'
+    +'<td style="padding:8px;text-align:center">الكل</td>'
+    +'<td style="padding:8px;text-align:center;color:#1e6b3c">'+tot.buyM3.toFixed(2)+'</td>'
+    +'<td style="padding:8px;text-align:center">'+fmt(tot.buyPcs)+'</td>'
+    +'<td style="padding:8px;text-align:center;color:#c0392b">'+tot.sellM3.toFixed(2)+'</td>'
+    +'<td style="padding:8px;text-align:center">'+fmt(tot.sellPcs)+'</td>'
+    +'<td style="padding:8px;text-align:center;color:#c0392b">'+fmt(Math.round(tot.sellVal))+' ج</td>'
+    +'<td style="padding:8px;text-align:center;color:#b8792a">'+fmt(Math.round(tot.buyExp))+' ج</td>'
+    +'</tr></tfoot></table></div>'
+    +'<p style="font-size:0.72rem;color:#999;margin-top:8px">📥 المشتريات من الشحنات الواصلة (بالمتر والقطع) — 💰 قيمة المبيعات من الفواتير — مصاريف الرسائل = شحن/جمارك/نقل المسجلة على الشحنات</p>';
+  box.innerHTML=h;
+}
 function reportsRender(){
+  yearlyStatsRender();
+  recutReport();
   var _imR={};db.inv.forEach(function(i){_imR[i.id]=i;});
   var from=(G('rep-from')||{}).value||'';
   var to=(G('rep-to')||{}).value||'';
@@ -5268,10 +5770,12 @@ function reportsRender(){
   var bySpec={},byThick={};
   sales.forEach(function(s){
     (s.lines||[]).forEach(function(l){
-      var inv=_imR[l.invId];if(!inv)return;
-      var sp=((inv.spec||'').toUpperCase())||'—';var tk=(inv.thick||38);var val=inv.net*(l.price||0);
+      var inv=_imR[l.invId];
+      var d=l.noNum?{spec:l.spec,thick:l.thick||38,pcs:l.pcs||0,net:l.net||0}:(inv?{spec:inv.spec,thick:inv.thick||38,pcs:inv.pcs||0,net:inv.net}:null);
+      if(!d)return;
+      var sp=((d.spec||'').toUpperCase())||'—';var tk=(d.thick||38);var val=(d.net||0)*(l.price||0);
       if(!bySpec[sp])bySpec[sp]={cnt:0,pcs:0,m3:0,val:0};
-      bySpec[sp].cnt++;bySpec[sp].pcs+=(inv.pcs||0);bySpec[sp].m3+=inv.net;bySpec[sp].val+=val;
+      bySpec[sp].cnt++;bySpec[sp].pcs+=(d.pcs||0);bySpec[sp].m3+=(d.net||0);bySpec[sp].val+=val;
       if(!byThick[tk])byThick[tk]={cnt:0,pcs:0,m3:0,val:0};
       byThick[tk].cnt++;byThick[tk].pcs+=(inv.pcs||0);byThick[tk].m3+=inv.net;byThick[tk].val+=val;
     });
@@ -5332,10 +5836,12 @@ function reportsRender(){
   var sm={};
   sales.forEach(function(s){
     (s.lines||[]).forEach(function(l){
-      var inv=_imR[l.invId];if(!inv)return;
-      var k=(inv.spec||'?')+'|'+(inv.thick||38);
-      if(!sm[k])sm[k]={spec:(inv.spec||'?').toLowerCase(),thick:inv.thick||38,cnt:0,pcs:0,m3:0,val:0};
-      sm[k].cnt++;sm[k].pcs+=(inv.pcs||0);sm[k].m3+=(inv.net||0);sm[k].val+=inv.net*(l.price||0);
+      var inv=_imR[l.invId];
+      var d=l.noNum?{spec:l.spec,thick:l.thick||38,pcs:l.pcs||0,net:l.net||0}:(inv?{spec:inv.spec,thick:inv.thick||38,pcs:inv.pcs||0,net:inv.net}:null);
+      if(!d)return;
+      var k=(d.spec||'?')+'|'+(d.thick||38);
+      if(!sm[k])sm[k]={spec:(d.spec||'?').toLowerCase(),thick:d.thick||38,cnt:0,pcs:0,m3:0,val:0};
+      sm[k].cnt++;sm[k].pcs+=(d.pcs||0);sm[k].m3+=(d.net||0);sm[k].val+=(d.net||0)*(l.price||0);
     });
   });
   var salData=Object.keys(sm).map(function(k){return sm[k];});
@@ -6665,6 +7171,20 @@ function exportXL(type){
 // END EXPORT MODULE
 
 // ═══ SETTINGS MODULE ═══
+function getPayFees(){
+  var saved=localStorage.getItem('woodstore_pay_fees');
+  if(saved){try{return JSON.parse(saved);}catch(e){}}
+  return {}; // {اسم الطريقة: نسبة مئوية}
+}
+function savePayFees(fees){localStorage.setItem('woodstore_pay_fees',JSON.stringify(fees));}
+function payFeePct(method){var f=getPayFees();return (f[method]!==undefined&&f[method]!==null)?parseFloat(f[method])||0:0;}
+// يرجّع اللي يوصلك فعلياً بعد خصم العمولة
+function applyPayFee(amount,method){
+  var pct=payFeePct(method);
+  if(pct<=0)return {net:amount,fee:0,pct:0};
+  var fee=Math.round(amount*pct/100*100)/100;
+  return {net:Math.round((amount-fee)*100)/100,fee:fee,pct:pct};
+}
 function getPayMethods(){
   var saved=localStorage.getItem('woodstore_pay_methods');
   if(saved){try{return JSON.parse(saved);}catch(e){}}
@@ -6707,13 +7227,34 @@ function setInit(){
 }
 function setPayRender(){
   var methods=getPayMethods();
+  var fees=getPayFees();
   var box=G('set-pay-list');if(!box)return;
   box.innerHTML=methods.map(function(m,i){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f0ebe2">'+
-      '<span style="font-size:0.85rem;font-weight:700">'+esc(m)+'</span>'+
+    var fee=fees[m]||0;
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:1px solid #f0ebe2;gap:8px;flex-wrap:wrap">'+
+      '<span style="font-size:0.85rem;font-weight:700;flex:1;min-width:100px">'+esc(m)+'</span>'+
+      '<div style="display:flex;align-items:center;gap:4px">'+
+        '<span style="font-size:0.72rem;color:#888">عمولة</span>'+
+        '<input type="number" step="0.1" min="0" max="100" value="'+fee+'" onchange="setPayFeeChange('+i+',this.value)" style="width:58px;padding:4px 6px;border:2px solid '+(fee>0?'#d4812a':'#e8ddd0')+';border-radius:6px;font-family:Cairo,sans-serif;font-size:0.8rem;text-align:center;font-weight:700">'+
+        '<span style="font-size:0.72rem;color:#888">%</span>'+
+      '</div>'+
       '<button class="btn bd" style="font-size:0.65rem;padding:2px 8px;touch-action:manipulation" onclick="setPayDel('+i+')">حذف</button>'+
     '</div>';
-  }).join('');
+  }).join('')+'<p style="font-size:0.72rem;color:#999;margin-top:8px;padding:0 4px">💡 لو طريقة دفع فيها عمولة (زي المحافظ الإلكترونية 1%)، اكتب النسبة قصادها. البرنامج هيخصمها تلقائياً من كل دفعة، والعميل يتحاسب باللي وصلك فعلاً.</p>';
+}
+function setPayFeeChange(idx,val){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 للمدير فقط');
+  var methods=getPayMethods();
+  if(idx<0||idx>=methods.length)return;
+  var m=methods[idx];
+  var fees=getPayFees();
+  var pct=parseFloat(val)||0;
+  if(pct<0)pct=0;if(pct>100)pct=100;
+  if(pct===0)delete fees[m];else fees[m]=pct;
+  savePayFees(fees);
+  setPayRender();
+  try{auditLog('تعديل عمولة طريقة دفع',m+': '+pct+'%');}catch(e){}
+  showAl('set-pay-al','✅ اتحدّثت عمولة '+m+' لـ '+pct+'%',true);
 }
 function setPayAdd(){
   var inp=G('set-pay-new');
