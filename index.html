@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.22 — تدقيق منع الآجل (الاسم بالكامل مش جزئي) + كل إصلاحات التجربة العملية (يوليو 2026) -->
+<!-- v11.9.26 — إصلاح ترتيب مرشحي الجرد: التكعيب أهم من فرق العدّ (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -2674,35 +2674,66 @@ function stockAuditOpen(){
   pend.forEach(function(p,idx){
     // الصفوف المرشّحة: نفس النوع + الطول + العدد (متاحة)
     // مرونة: تطابق كامل أولاً، وبعده تطابق تقريبي (العدد ±3 ألواح) عشان العدّ مش دايماً مظبوط
+    // مقارنة مرنة للنص: تتجاهل الحروف الكبيرة/الصغيرة والمسافات الزيادة
+    var _txtEq=function(a,b){return String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();};
+    // 🏭 المصنع فيصل: رابطة من مصنع تاني مستحيل تكون هي — يُطبّق في كل المستويات
+    var _facOK=function(i){
+      if(!p.factory)return true;              // مش محدد مصنع → مفيش فلترة
+      if(!i.factory)return false;             // الصف مالوش مصنع → مش مرشح
+      return _txtEq(i.factory,p.factory);
+    };
+    var _specOK=function(i){return _txtEq(i.spec,p.spec);};
     var _exact=(db.inv||[]).filter(function(i){
-      return i.avail>0 && i.spec===p.spec && String(i.len)===String(p.len) && String(i.pcs)===String(p.pcs)
-        && (!p.factory||!i.factory||i.factory===p.factory)
-        && (!p.shRef||!i.shRef||i.shRef===p.shRef);
+      return i.avail>0 && _specOK(i) && _facOK(i)
+        && _txtEq(i.len,p.len) && String(i.pcs)===String(p.pcs)
+        && (!p.shRef||!i.shRef||_txtEq(i.shRef,p.shRef));
     });
     var _near=(db.inv||[]).filter(function(i){
       if(_exact.indexOf(i)>=0)return false;
-      if(i.avail<=0||i.spec!==p.spec)return false;
-      if(String(i.len)!==String(p.len))return false;
+      if(i.avail<=0||!_specOK(i)||!_facOK(i))return false;
+      if(!_txtEq(i.len,p.len))return false;
       var pd=Math.abs((i.pcs||0)-(p.pcs||0));
-      return pd>0&&pd<=3; // فرق بسيط في العدّ
+      return pd>0&&pd<=6; // العدد ممكن يزيد أو يقل — الاتجاهين مقبولين
     });
-    var cands=_exact.concat(_near);
+    // 📉 الترتيب: التكعيب الجديد غالباً أقل (عجز)، فالصف الأصلي المفروض تكعيبه أعلى.
+    // فبنرتّب: الصفوف الأعلى تكعيباً وأقربها لرابطتك الأول، والأقل بعدهم.
+    var _rank=function(x){
+      var d=(x.net||0)-(p.net||0);           // موجب = الصف أعلى (عجز — المتوقع)
+      return d>=0 ? d : (Math.abs(d)*3+0.5); // الأقل تكعيباً يتأخّر في الترتيب
+    };
+    var _byNet=function(a,b){return _rank(a)-_rank(b);};
+    // نرتّب الكل مع بعض بالتكعيب (أهم من فرق العدّ — العدّ نفسه مش موثوق)،
+    // وبنفضّل المطابق تماماً بس لو التكعيب متقارب جداً
+    var _exactSet={};_exact.forEach(function(x){_exactSet[x.id]=1;});
+    var _all=_exact.concat(_near);
+    _all.sort(function(a,b){
+      var d=_rank(a)-_rank(b);
+      if(Math.abs(d)>0.008)return d;          // فرق تكعيب واضح → الأقرب أولاً
+      return (_exactSet[b.id]?1:0)-(_exactSet[a.id]?1:0); // تكعيب متقارب → المطابق تماماً أولاً
+    });
+    var cands=_all;
     var _exactCount=_exact.length;
+    // لو مفيش ولا مرشح: وسّع للنوع + المصنع (بدون شرط الطول والعدد)
+    if(!cands.length){
+      var _wide=(db.inv||[]).filter(function(i){return i.avail>0&&_specOK(i)&&_facOK(i);}).sort(_byNet).slice(0,8);
+      cands=_wide;_exactCount=0;
+    }
     h+='<div style="background:#faf5ff;border:1px solid #e5d5f5;border-radius:10px;padding:12px;margin-bottom:10px">'
       +'<div style="font-size:0.82rem;margin-bottom:8px"><b>🏷️ '+esc(p.spec)+'</b> | '+(p.thick||38)+'mm | طول '+esc(p.len)+' | '+fmt(p.pcs)+' لوح | <b style="color:var(--ac)">'+(p.net||0).toFixed(3)+' م³</b>'
-      +'<div style="font-size:0.72rem;color:#888;margin-top:2px">اتباعت لـ '+esc(p.cnm||'نقدي')+' يوم '+p.dt+(p.factory?' | مصنع: '+esc(p.factory):'')+(p.shRef?' | شحنة: '+esc(p.shRef):'')+'</div></div>';
+      +'<div style="font-size:0.72rem;color:#888;margin-top:2px">اتباعت لـ '+esc(p.cnm||'نقدي')+' يوم '+p.dt+(p.factory?' | 🏭 مصنع: <b>'+esc(p.factory)+'</b>':'')+(p.shRef?' | شحنة: '+esc(p.shRef):'')+'</div>'
+      +(p.factory?'<div style="font-size:0.68rem;color:#2c5d8a;margin-top:3px">🏭 المرشحين من مصنع "'+esc(p.factory)+'" فقط</div>':'')+'</div>';
     if(!cands.length){
-      h+='<p style="font-size:0.78rem;color:#c0392b;margin:0">⚠️ مفيش صف مطابق في المخزون (نفس النوع/الطول/العدد). يمكن اتقفل قبل كده، أو المواصفات مختلفة.</p>'
+      h+='<p style="font-size:0.78rem;color:#c0392b;margin:0">⚠️ مفيش صف مطابق في المخزون'+(p.factory?' من مصنع "'+esc(p.factory)+'"':'')+'. يمكن اتقفل قبل كده، أو المصنع/المواصفات مختلفة.</p>'
         +'<button class="btn bo bs" style="margin-top:6px" onclick="stockAuditForce('+idx+')">تسوية يدوية (بدون قفل صف)</button>';
     } else {
       h+='<div style="font-size:0.76rem;font-weight:700;margin-bottom:4px">اختار الصف اللي اتباع فعلاً:</div>'
-        +(_exactCount<cands.length?'<div style="font-size:0.7rem;color:#b8792a;margin-bottom:6px">💡 الصفوف الملوّنة = عددها مختلف بفرق بسيط (العدّ مش دايماً مظبوط)</div>':'');
+        +(_exactCount<cands.length?'<div style="font-size:0.7rem;color:#b8792a;margin-bottom:6px">💡 مرتّبة بالأرجح (الصفوف اللي تكعيبها أعلى من رابطتك = عجز متوقع). الملوّنة = عددها مختلف</div>':'<div style="font-size:0.7rem;color:#888;margin-bottom:6px">💡 مرتّبة بالأرجح — الصفوف اللي تكعيبها أعلى (عجز متوقع) الأول</div>');
       h+='<div style="display:grid;gap:5px">';
       cands.forEach(function(c,ci){
         var diff=(p.net||0)-(c.net||0); // موجب=زيادة، سالب=عجز
         var diffTxt=Math.abs(diff)<0.001?'مطابق':(diff>0?('زيادة '+diff.toFixed(3)):('عجز '+Math.abs(diff).toFixed(3)));
         var diffColor=Math.abs(diff)<0.001?'#1e6b3c':(diff>0?'#1e6b3c':'#c0392b');
-        var isNear=ci>=_exactCount;
+        var isNear=!_exactSet[c.id];
         var pcsDiff=(c.pcs||0)-(p.pcs||0);
         h+='<div style="display:flex;justify-content:space-between;align-items:center;background:'+(isNear?'#fffbf0':'white')+';border:1px solid '+(isNear?'#f0dcb8':'#e8ddd0')+';border-radius:8px;padding:8px;flex-wrap:wrap;gap:6px">'
           +'<div style="font-size:0.8rem"><b>#'+esc(String(c.num))+'</b> | '+fmt(c.pcs||0)+' لوح'
@@ -2728,7 +2759,7 @@ function stockAuditClose(idx,invId){
   p.lineRef.invId=inv.id;
   p.lineRef.settled=1;
   p.lineRef.auditDiff=Math.round(diff*1000)/1000;
-  _logRecut(inv,inv.net,(p.net||0),'audit'); // القديم=تكعيب المخزون، الجديد=المُباع فعلاً
+  _logRecut(inv,inv.net,(p.net||0),'audit',p.saleId); // القديم=تكعيب المخزون، الجديد=المُباع فعلاً
   inv.avail=0;inv.mt=new Date().toISOString();
   markInvDirty();recalcInv();dbSave();
   try{auditLog('جرد: قفل صف مجهول','#'+inv.num+' ('+diffTxt+') — عميل '+(p.cnm||'نقدي'));}catch(e){}
@@ -3257,7 +3288,7 @@ function slSearch(q){
       '<td style="padding:6px;text-align:center">'+inv.len+'</td>'+
       '<td style="padding:6px;text-align:center"><strong style="color:var(--gr)">'+fmt(inv.pcs||0)+'</strong></td>'+
       '<td style="padding:6px;text-align:center">'+inv.net.toFixed(3)+'</td>'+
-      '<td style="padding:6px;text-align:center;white-space:nowrap"><button class="btn bo bs" style="margin-inline-end:2px;padding:3px 6px" onclick="slFixSpec(\''+inv.id+'\')" title="عدّل النوع/الدرجة">✏️ نوع</button><button class="btn bo bs" style="margin-inline-end:2px;padding:3px 6px" onclick="slFixPcs(\''+inv.id+'\')" title="عدّل عدد الألواح">✏️ عدد</button><button class="btn bo bs" style="margin-inline-end:2px;padding:3px 6px" onclick="slFixNet(\''+inv.id+'\')" title="صحّح التكعيب">✏️ م³</button><button class="btn bg_ bs" onclick="slAddFromSearch(\''+inv.id+'\')">+ إضافة</button></td></tr>';}).join('')+'</tbody></table>';
+      '<td style="padding:6px;text-align:center;white-space:nowrap"><button class="btn bo bs" style="margin-inline-end:3px;padding:4px 9px" onclick="slFixAll(\''+inv.id+'\')" title="عدّل النوع والعدد والتكعيب مرة واحدة">✏️ تعديل</button><button class="btn bg_ bs" onclick="slAddFromSearch(\''+inv.id+'\')">+ إضافة</button></td></tr>';}).join('')+'</tbody></table>';
 }
 function slFixSpec(invId){
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 تعديل النوع للمدير فقط');
@@ -3273,11 +3304,12 @@ function slFixSpec(invId){
   slSearch(G('sl-srch')?G('sl-srch').value:'');
   showAl('sl-al','✅ اتعدّل نوع الرابطة #'+inv.num+' لـ '+v,true);
 }
-function _logRecut(inv,oldNet,newNet,src){
+function _logRecut(inv,oldNet,newNet,src,saleId){
   if(!db.recutLog)db.recutLog=[];
   var diff=Math.round((newNet-oldNet)*1000)/1000;
   db.recutLog.push({
     id:'rc'+Date.now()+Math.random().toString(36).slice(2,6),
+    saleId:saleId||'',
     dt:todayLocal(),
     num:String(inv.num||'🏷️'),
     spec:inv.spec||'',
@@ -3302,6 +3334,62 @@ window.recutClear=function(){
   reportsRender();
   showAl('rep-recut-al','✅ اتصفّى السجل — التقرير هيبدأ يتجمّع من جديد',true);
 };
+function slFixAll(invId){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 التعديل للمدير فقط');
+  var inv=db.inv.find(function(x){return x.id===invId;});if(!inv)return;
+  var specs=[...new Set((db.inv||[]).map(function(i){return i.spec;}).filter(Boolean))].sort();
+  var m=document.getElementById('fixall-modal');
+  if(m)m.remove();
+  m=document.createElement('div');m.id='fixall-modal';
+  m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  m.innerHTML='<div style="background:white;border-radius:14px;padding:20px;max-width:420px;width:100%;max-height:90vh;overflow:auto">'
+    +'<h3 style="margin:0 0 4px;color:var(--dk)">✏️ تعديل بيانات الرابطة #'+esc(String(inv.num))+'</h3>'
+    +'<p style="font-size:0.75rem;color:#888;margin:0 0 14px">عدّل اللي محتاجه واضغط حفظ — اللي متغيرتوش هيفضل زي ما هو</p>'
+    +'<div style="display:grid;gap:12px">'
+    +'<div><label style="font-size:0.8rem;font-weight:700">النوع/الدرجة</label>'
+    +'<input list="fa-specs" id="fa-spec" value="'+escAttr(inv.spec||'')+'" style="width:100%;padding:9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif">'
+    +'<datalist id="fa-specs">'+specs.map(function(s){return '<option value="'+escAttr(s)+'">';}).join('')+'</datalist></div>'
+    +'<div style="display:flex;gap:8px">'
+    +'<div style="flex:1"><label style="font-size:0.8rem;font-weight:700">عدد الألواح</label>'
+    +'<input id="fa-pcs" type="number" value="'+(inv.pcs||0)+'" style="width:100%;padding:9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"></div>'
+    +'<div style="flex:1"><label style="font-size:0.8rem;font-weight:700">التكعيب م³</label>'
+    +'<input id="fa-net" type="number" step="0.001" value="'+(inv.net||0).toFixed(3)+'" style="width:100%;padding:9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif"></div>'
+    +'</div>'
+    +'<div style="background:#f9f5f0;border-radius:8px;padding:8px;font-size:0.75rem;color:#777">'
+    +'الحالي: '+esc(inv.spec||'')+' | '+(inv.thick||38)+'mm | طول '+esc(String(inv.len))+' | '+fmt(inv.pcs||0)+' لوح | '+(inv.net||0).toFixed(3)+' م³</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:8px;margin-top:16px">'
+    +'<button class="btn bg_" style="flex:1" onclick="slFixAllSave(\''+invId+'\')">✅ حفظ التعديلات</button>'
+    +'<button class="btn bo" onclick="document.getElementById(\'fixall-modal\').remove()">إلغاء</button>'
+    +'</div></div>';
+  document.body.appendChild(m);
+}
+function slFixAllSave(invId){
+  var inv=db.inv.find(function(x){return x.id===invId;});if(!inv)return;
+  var nSpec=(G('fa-spec').value||'').trim();
+  var nPcs=parseInt(G('fa-pcs').value);
+  var nNet=parseFloat(G('fa-net').value);
+  if(!nSpec)return alert('اكتب النوع');
+  if(isNaN(nPcs)||nPcs<=0)return alert('عدد الألواح لازم يكون أكبر من صفر');
+  if(isNaN(nNet)||nNet<=0)return alert('التكعيب لازم يكون أكبر من صفر');
+  var oSpec=inv.spec,oPcs=inv.pcs||0,oNet=inv.net||0;
+  var changes=[];
+  if(nSpec!==oSpec)changes.push('النوع: '+oSpec+' → '+nSpec);
+  if(nPcs!==oPcs)changes.push('العدد: '+oPcs+' → '+nPcs+' لوح');
+  if(Math.abs(nNet-oNet)>0.0001){
+    changes.push('التكعيب: '+oNet.toFixed(3)+' → '+nNet.toFixed(3)+' م³');
+    _logRecut(inv,oNet,nNet,'edit'); // العجز/الزيادة للتكعيب بس
+  }
+  if(!changes.length){document.getElementById('fixall-modal').remove();return;}
+  inv.spec=nSpec;inv.pcs=nPcs;inv.net=nNet;inv.mt=new Date().toISOString();
+  markInvDirty();dbSave();
+  try{auditLog('تعديل بيانات رابطة','#'+inv.num+': '+changes.join(' | '));}catch(e){}
+  document.getElementById('fixall-modal').remove();
+  slSearch(G('sl-srch')?G('sl-srch').value:'');
+  var netDiff=nNet-oNet;
+  var diffTxt=Math.abs(netDiff)<0.001?'':(netDiff>0?(' — زيادة '+netDiff.toFixed(3)+' م³ ⬆️'):(' — عجز '+Math.abs(netDiff).toFixed(3)+' م³ ⬇️'));
+  showAl('sl-al','✅ اتعدّلت الرابطة #'+inv.num+': '+changes.join('، ')+diffTxt,true);
+}
 function slFixPcs(invId){
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 تعديل العدد للمدير فقط');
   var inv=db.inv.find(function(x){return x.id===invId;});if(!inv)return;
@@ -3633,8 +3721,8 @@ function slPrint(saleId){
       });
     }
   }
-  var payColor=s.pay==='\u0643\u0627\u0634'?'#155724':s.pay==='\u0622\u062c\u0644'?'#721c24':'#0c3547';
-  var payBg=s.pay==='\u0643\u0627\u0634'?'#d4edda':s.pay==='\u0622\u062c\u0644'?'#f8d7da':'#d1ecf1';
+  var payColor=s.pay==='\u0622\u062c\u0644'?'#721c24':'#155724';
+  var payBg=s.pay==='\u0622\u062c\u0644'?'#f8d7da':'#d4edda';
 
   var css=[
     'body,*{font-family:Cairo,Arial,sans-serif!important}',
@@ -3718,7 +3806,7 @@ function slPrint(saleId){
     +'<div style="display:flex;justify-content:center;align-items:center;gap:20px">'
     +'<div style="font-size:0.85rem;color:#f0c040;font-weight:700">\u0625\u062c\u0645\u0627\u0644\u064a \u0627\u0644\u0628\u064a\u0627\u0646</div>'
     +'<div style="font-size:1.8rem;font-weight:900;color:white">'+fmt(s.price||0)+' \u062c</div>'
-    +(s.pay==='\u0643\u0627\u0634'||s.pay==='\u0634\u064a\u0643'
+    +(s.pay!=='\u0622\u062c\u0644'
       ?'<div style="color:#4dff91;font-size:0.82rem;font-weight:700">\u2705 \u0645\u0633\u062f\u062f \u0628\u0627\u0644\u0643\u0627\u0645\u0644</div>'
       :'<div style="color:#ffa07a;font-size:0.82rem;font-weight:700">\u26a0\ufe0f \u0622\u062c\u0644</div>')
   +'</div>'
@@ -4005,7 +4093,15 @@ function saleEditSave(){
   var s=db.sales.find(function(x){return x.id===_seId;});if(!s)return;
   var _snapBefore=JSON.stringify(Object.assign({},s,{mt:null})); // صورة قبل التعديل — للمقارنة
   var nm=(G('se-cust').value||'').trim();
-  var newCid=(G('se-cust-id')||{value:''}).value||s.cid||'';
+  // 🔧 لو الاسم اتمسح أو اتغيّر لنقدي → العميل يبقى نقدي (مش يرجع للقديم)
+  var _cidField=(G('se-cust-id')||{value:''}).value;
+  var _nmRaw=(G('se-cust').value||'').trim();
+  var newCid=_cidField;
+  if(!_cidField){
+    // مفيش عميل مختار: لو الاسم فاضي أو "نقدي" → بيعة نقدية
+    if(!_nmRaw||/^(عميل\s*)?(نقد[يى]|كاش|cash|نقدا)$/i.test(_nmRaw))newCid='';
+    else newCid=s.cid||''; // اسم مكتوب من غير اختيار: نسيب العميل زي ما هو
+  }
   var oldCid=s.cid||'';
   var oldPrice=s.price||0;
   var custChanged=(newCid!==oldCid);
@@ -4022,9 +4118,9 @@ function saleEditSave(){
   if(nm) s.cnm=nm;
   if(custChanged){
     s.cid=newCid;
-    var newCuObj=db.custs.find(function(c){return c.id===newCid;});
+    var newCuObj=newCid?db.custs.find(function(c){return c.id===newCid;}):null;
     if(newCuObj)s.cnm=newCuObj.nm;
-    else if(!nm)s.cnm='عميل نقدي';
+    else s.cnm=(_nmRaw&&!/^(عميل\s*)?(نقد[يى]|كاش|cash|نقدا)$/i.test(_nmRaw))?_nmRaw:'عميل نقدي';
   }
   s.dt=G('se-date').value||s.dt;
   var _newPay=G('se-pay').value;
@@ -4187,11 +4283,16 @@ function saleDel(saleId){
   // 🔓 حرّر حجز الرابطات على السيرفر فوراً — عشان تقدر تبيعها تاني من غير مشاكل
   var _sDel=db.sales.find(function(x){return x.id===saleId;});
   if(_sDel&&typeof _releaseClaims==='function'){_releaseClaims((_sDel.lines||[]).map(function(l){return l.invId;}));}
-  // 🔧 شيل سجلات إعادة التكعيب اللي اتعملت من جرد البيعة دي (عشان تقرير المصانع ما يفضلش معلّم عجز)
-  if(_sDel&&db.recutLog&&db.recutLog.length){
-    var _delInvIds={};(_sDel.lines||[]).forEach(function(l){if(l.invId)_delInvIds[l.invId]=1;});
-    var _delNums={};(db.inv||[]).forEach(function(i){if(_delInvIds[i.id])_delNums[String(i.num)]=1;});
-    db.recutLog=db.recutLog.filter(function(r){return !(r.src==='audit'&&_delNums[String(r.num)]);});
+  // 🔧 شيل سجلات إعادة التكعيب اللي اتعملت من جرد البيعة دي (بالـsaleId — أضمن من الرقم)
+  if(db.recutLog&&db.recutLog.length){
+    var _before=db.recutLog.length;
+    db.recutLog=db.recutLog.filter(function(r){return !(r.src==='audit'&&r.saleId===saleId);});
+    // احتياطي للسجلات القديمة (اللي مالهاش saleId): امسح بالرقم
+    if(db.recutLog.length===_before&&_sDel){
+      var _delInvIds={};(_sDel.lines||[]).forEach(function(l){if(l.invId)_delInvIds[l.invId]=1;});
+      var _delNums={};(db.inv||[]).forEach(function(i){if(_delInvIds[i.id])_delNums[String(i.num)]=1;});
+      db.recutLog=db.recutLog.filter(function(r){return !(r.src==='audit'&&!r.saleId&&_delNums[String(r.num)]);});
+    }
   }
   trackDelete(saleId);trackDeleteCb(saleId);
   var s=db.sales.find(function(x){return x.id===saleId;});if(!s)return;
