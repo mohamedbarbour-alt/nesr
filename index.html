@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.26 — إصلاح ترتيب مرشحي الجرد: التكعيب أهم من فرق العدّ (يوليو 2026) -->
+<!-- v11.9.27 — إصلاح جذري: كل عمليات الحذف بتتسجّل في قايمة المحذوفات (المزامنة مش بترجّعها تاني) (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -1495,7 +1495,18 @@ function supaSetCAS(data,casTs){
   });
 }
 // إعادة حساب إجماليات ومديونية العملاء من البيانات الفعلية (بعد الدمج)
+function _ensurePayIds(){
+  // دفعة بدون id مستحيل تتمسح صح (trackDelete بيتجاهل الفاضي) — فبندّيها id ثابت
+  var changed=false;
+  (db.custs||[]).forEach(function(c){
+    (c.payments||[]).forEach(function(p,i){
+      if(!p.id){p.id='pf'+(c.id||'x')+'_'+i+'_'+Math.random().toString(36).slice(2,7);changed=true;}
+    });
+  });
+  return changed;
+}
 function _recalcCustTotals(){
+  _ensurePayIds();
   (db.custs||[]).forEach(function(c){
     var saleTot=(db.sales||[]).filter(function(s){return s.cid===c.id;}).reduce(function(s,x){return s+(x.price||0);},0);
     var charges=(c.payments||[]).filter(function(p){return p.type==='charge';}).reduce(function(s,p){return s+(p.amt||0);},0);
@@ -1756,7 +1767,7 @@ function _attemptWrite(attempt){
           db=dbMerge(JSON.parse(JSON.stringify(db)),remote);
           _ensureArrays();
           db.inv.forEach(function(it){it._orig=1;it.avail=it.avail>0?1:0;});
-          _invDirty=true;recalcInv();_recalcCustTotals();
+          _invDirty=true;recalcInv();_ensurePayIds();_recalcCustTotals();
         }catch(e){console.warn('merge before save failed',e);}
       }
     }
@@ -1930,7 +1941,7 @@ function dbMerge(local,remote){
   m.cashbook=mergeArr(local.cashbook,remote.cashbook);
   m.expenses=mergeArr(local.expenses,remote.expenses);
   m.cheques=mergeArr(local.cheques,remote.cheques);
-  m.recutLog=mergeArr(local.recutLog,remote.recutLog);
+  m.recutLog=mergeArr(local.recutLog,remote.recutLog).filter(function(r){return !delMap[r.id];});
   m.sups=mergeArr(local.sups,remote.sups);
   m.inv=mergeArr(local.inv,remote.inv);
   // العملاء — دمج بالـ ID + دمج الدفعات مع استبعاد المحذوفات
@@ -3329,6 +3340,7 @@ window.recutClear=function(){
   var n=(db.recutLog||[]).length;
   if(!n)return alert('السجل فاضي أصلاً');
   if(!confirm('🗑️ تصفية سجل إعادة التكعيب؟\n\nهيتمسح '+n+' سجل. ده بيصفّر تقرير جودة المصانع عشان تبدأ من جديد.\n\n(البيانات دي إحصائية فقط — مش بتأثر على مخزونك أو مبيعاتك).'))return;
+  try{(db.recutLog||[]).forEach(function(r){if(r.id)trackDelete(r.id);});}catch(e){}
   db.recutLog=[];dbSave();
   try{auditLog('تصفية سجل إعادة التكعيب',n+' سجل');}catch(e){}
   reportsRender();
@@ -4109,6 +4121,7 @@ function saleEditSave(){
   if(oldCid){
     var oldCu=db.custs.find(function(c){return c.id===oldCid;});
     if(oldCu){
+      try{trackDelete('px'+s.id);}catch(e){}
       oldCu.payments=(oldCu.payments||[]).filter(function(p){return p.id!=='px'+s.id;});
       oldCu.total=Math.max(0,(oldCu.total||0)-oldPrice);
       oldCu.debt=cuCalcDebt(oldCu);
@@ -4169,6 +4182,7 @@ function saleEditSave(){
       // أضف قيمة البيعة لمجموع العميل
       cu.total=(cu.total||0)+s.price;
       // 🔧 امسح أي دفعة قديمة للبيعة دي (لو كانت كاش وبقت آجل، أو اتغيّر المبلغ)
+      if(s.pay==='آجل'){try{trackDelete('px'+s.id);}catch(e){}}
       cu.payments=(cu.payments||[]).filter(function(p){return p.id!=='px'+s.id;});
       // لو دفع فوري سجّل دفعة جديدة (بالعمولة لو فيه)
       if(s.pay!=='آجل'){
@@ -4286,11 +4300,14 @@ function saleDel(saleId){
   // 🔧 شيل سجلات إعادة التكعيب اللي اتعملت من جرد البيعة دي (بالـsaleId — أضمن من الرقم)
   if(db.recutLog&&db.recutLog.length){
     var _before=db.recutLog.length;
+    // سجّل المحذوف في قايمة المحذوفات (عشان المزامنة ما ترجّعهوش)
+    db.recutLog.forEach(function(r){if(r.src==='audit'&&r.saleId===saleId&&r.id){try{trackDelete(r.id);}catch(e){}}});
     db.recutLog=db.recutLog.filter(function(r){return !(r.src==='audit'&&r.saleId===saleId);});
     // احتياطي للسجلات القديمة (اللي مالهاش saleId): امسح بالرقم
     if(db.recutLog.length===_before&&_sDel){
       var _delInvIds={};(_sDel.lines||[]).forEach(function(l){if(l.invId)_delInvIds[l.invId]=1;});
       var _delNums={};(db.inv||[]).forEach(function(i){if(_delInvIds[i.id])_delNums[String(i.num)]=1;});
+      db.recutLog.forEach(function(r){if(r.src==='audit'&&!r.saleId&&_delNums[String(r.num)]&&r.id){try{trackDelete(r.id);}catch(e){}}});
       db.recutLog=db.recutLog.filter(function(r){return !(r.src==='audit'&&!r.saleId&&_delNums[String(r.num)]);});
     }
   }
@@ -5191,6 +5208,7 @@ function cuDelPayment(pid){
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
   dbSaveUndo('حذف حركة عميل');
   if(!confirm('حذف هذه الحركة من كشف الحساب؟'))return;
+  _ensurePayIds(); // اتأكد إن كل الدفعات ليها id قبل الحذف
   trackDelete(pid);trackDeleteCb(pid);
   var c=db.custs.find(function(x){return x.id===_cuId;});if(!c)return;
   var pay=c.payments.find(function(p){return p.id===pid;});
