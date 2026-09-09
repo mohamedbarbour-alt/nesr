@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.28 — إصلاح الدفعة الدائنة اللي بترجع: حذف المرتجع مش بيلغي حذف الدفعة (يوليو 2026) -->
+<!-- v11.9.29 — حماية شاملة: أي دفعة محذوفة مستحيل ترجع من أي مسار (تعديل/مرتجع/مزامنة) (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -1498,6 +1498,21 @@ function supaSetCAS(data,casTs){
 function _payWasDeleted(pid){
   return (db.deleted||[]).some(function(d){return d.id===pid;});
 }
+function _purgeDeletedPays(){
+  // 🛡️ حماية شاملة: أي دفعة الـid بتاعها في قايمة المحذوفات تتشال فوراً
+  // (بتمنع رجوعها من أي مسار — تعديل، مرتجع، مزامنة، أو كود قديم)
+  var delSet={};
+  (db.deleted||[]).forEach(function(d){if(d.id)delSet[d.id]=1;});
+  if(!Object.keys(delSet).length)return false;
+  var removed=0;
+  (db.custs||[]).forEach(function(c){
+    if(!c.payments||!c.payments.length)return;
+    var before=c.payments.length;
+    c.payments=c.payments.filter(function(p){return !(p.id&&delSet[p.id]);});
+    removed+=(before-c.payments.length);
+  });
+  return removed>0;
+}
 function _ensurePayIds(){
   // دفعة بدون id مستحيل تتمسح صح (trackDelete بيتجاهل الفاضي) — فبندّيها id ثابت
   var changed=false;
@@ -1510,6 +1525,7 @@ function _ensurePayIds(){
 }
 function _recalcCustTotals(){
   _ensurePayIds();
+  _purgeDeletedPays();
   (db.custs||[]).forEach(function(c){
     var saleTot=(db.sales||[]).filter(function(s){return s.cid===c.id;}).reduce(function(s,x){return s+(x.price||0);},0);
     var charges=(c.payments||[]).filter(function(p){return p.type==='charge';}).reduce(function(s,p){return s+(p.amt||0);},0);
@@ -2013,6 +2029,7 @@ function updateSyncIndicator(){
   el.textContent=txt;el.style.color=color;el.style.background=bg;
 }
 function dbSave(){
+  try{_purgeDeletedPays();}catch(e){}
   markInvDirty();
   var data;
   try{data=JSON.stringify(db);}catch(e){alert('خطأ في تجهيز البيانات للحفظ: '+e.message);return;}
@@ -4190,7 +4207,7 @@ function saleEditSave(){
       // لو دفع فوري سجّل دفعة جديدة (بالعمولة لو فيه)
       if(s.pay!=='آجل'){
         var _pfE=(typeof applyPayFee==='function')?applyPayFee(s.price,s.pay):{net:s.price,fee:0,pct:0};
-        cu.payments.push({id:'px'+s.id,dt:s.dt,amt:_pfE.net,type:'pay',method:s.pay,note:s.pay+(_pfE.fee>0?(' (بعد عمولة '+_pfE.pct+'%)'):'')});
+        if(!_payWasDeleted('px'+s.id))cu.payments.push({id:'px'+s.id,dt:s.dt,amt:_pfE.net,type:'pay',method:s.pay,note:s.pay+(_pfE.fee>0?(' (بعد عمولة '+_pfE.pct+'%)'):'')});
       }
       cu.debt=cuCalcDebt(cu);
     }
@@ -5266,8 +5283,7 @@ function cuDelReturn(rid){
       else{
         // 🔧 الدفعة الأصلية اتمسحت (يدوياً أو بالمرتجع) — نعمل دفعة جديدة بـid جديد
         // بدل ما نلغي تسجيل الحذف (اللي كان بيخلي الدفعة ترجع كل مرة تمسحها)
-        var _wasDeleted=(db.deleted||[]).some(function(d){return d.id==='px'+sale.id;});
-        if(!_wasDeleted){
+        if(!_payWasDeleted('px'+sale.id)){
           c.payments.push({id:'px'+sale.id,dt:sale.dt,amt:ret.refund||0,type:'pay',method:sale.pay,note:sale.pay});
         }
         // لو المستخدم مسحها بإيده قبل كده → ما نرجّعهاش (احترام قراره)
