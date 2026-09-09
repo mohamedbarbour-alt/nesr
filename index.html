@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.27 — إصلاح جذري: كل عمليات الحذف بتتسجّل في قايمة المحذوفات (المزامنة مش بترجّعها تاني) (يوليو 2026) -->
+<!-- v11.9.28 — إصلاح الدفعة الدائنة اللي بترجع: حذف المرتجع مش بيلغي حذف الدفعة (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -1495,6 +1495,9 @@ function supaSetCAS(data,casTs){
   });
 }
 // إعادة حساب إجماليات ومديونية العملاء من البيانات الفعلية (بعد الدمج)
+function _payWasDeleted(pid){
+  return (db.deleted||[]).some(function(d){return d.id===pid;});
+}
 function _ensurePayIds(){
   // دفعة بدون id مستحيل تتمسح صح (trackDelete بيتجاهل الفاضي) — فبندّيها id ثابت
   var changed=false;
@@ -3625,7 +3628,7 @@ async function slSave(){
       cu.total=(cu.total||0)+fp;
       if(pay!=='آجل'){
         var _pf=applyPayFee(fp,pay);
-        cu.payments.push({id:'px'+saleId,dt:dt,amt:_pf.net,type:'pay',method:pay,note:pay+(_pf.fee>0?(' (بعد عمولة '+_pf.pct+'% = '+fmt(_pf.fee)+' ج)'):'')});
+        if(!_payWasDeleted('px'+saleId))cu.payments.push({id:'px'+saleId,dt:dt,amt:_pf.net,type:'pay',method:pay,note:pay+(_pf.fee>0?(' (بعد عمولة '+_pf.pct+'% = '+fmt(_pf.fee)+' ج)'):'')});
       }
       cu.debt=cuCalcDebt(cu);
     }
@@ -5261,8 +5264,13 @@ function cuDelReturn(rid){
       var pxp=c.payments.find(function(p){return p.id==='px'+sale.id;});
       if(pxp){pxp.amt=(pxp.amt||0)+(ret.refund||0);}
       else{
-        c.payments.push({id:'px'+sale.id,dt:sale.dt,amt:ret.refund||0,type:'pay',method:sale.pay,note:sale.pay});
-        db.deleted=(db.deleted||[]).filter(function(d){return d.id!=='px'+sale.id;});
+        // 🔧 الدفعة الأصلية اتمسحت (يدوياً أو بالمرتجع) — نعمل دفعة جديدة بـid جديد
+        // بدل ما نلغي تسجيل الحذف (اللي كان بيخلي الدفعة ترجع كل مرة تمسحها)
+        var _wasDeleted=(db.deleted||[]).some(function(d){return d.id==='px'+sale.id;});
+        if(!_wasDeleted){
+          c.payments.push({id:'px'+sale.id,dt:sale.dt,amt:ret.refund||0,type:'pay',method:sale.pay,note:sale.pay});
+        }
+        // لو المستخدم مسحها بإيده قبل كده → ما نرجّعهاش (احترام قراره)
       }
     }
     c.total=(c.total||0)+(ret.refund||0);
