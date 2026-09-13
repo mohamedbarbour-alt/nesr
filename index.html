@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.29 — حماية شاملة: أي دفعة محذوفة مستحيل ترجع من أي مسار (تعديل/مرتجع/مزامنة) (يوليو 2026) -->
+<!-- v11.9.30 — طرق الدفع والعمولة بقت إعدادات مشتركة بتتزامن بين كل الأجهزة (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -1961,6 +1961,17 @@ function dbMerge(local,remote){
   m.expenses=mergeArr(local.expenses,remote.expenses);
   m.cheques=mergeArr(local.cheques,remote.cheques);
   m.recutLog=mergeArr(local.recutLog,remote.recutLog).filter(function(r){return !delMap[r.id];});
+  // إعدادات مشتركة: طرق الدفع والعمولة — الأحدث يكسب
+  var _lMod=local.settingsMt||'',_rMod=remote.settingsMt||'';
+  if(_rMod>_lMod){
+    if(remote.payMethods)m.payMethods=remote.payMethods;
+    if(remote.payFees)m.payFees=remote.payFees;
+    m.settingsMt=_rMod;
+  }else{
+    if(local.payMethods)m.payMethods=local.payMethods;
+    if(local.payFees)m.payFees=local.payFees;
+    if(_lMod)m.settingsMt=_lMod;
+  }
   m.sups=mergeArr(local.sups,remote.sups);
   m.inv=mergeArr(local.inv,remote.inv);
   // العملاء — دمج بالـ ID + دمج الدفعات مع استبعاد المحذوفات
@@ -7439,11 +7450,26 @@ function exportXL(type){
 
 // ═══ SETTINGS MODULE ═══
 function getPayFees(){
+  // 🔄 العمولة إعداد مشترك بين كل الأجهزة → متخزّن في db (بيتزامن)
+  if(db&&db.payFees&&typeof db.payFees==='object')return db.payFees;
+  // توافق خلفي: لو لسه في التخزين المحلي، انقله لـdb
   var saved=localStorage.getItem('woodstore_pay_fees');
-  if(saved){try{return JSON.parse(saved);}catch(e){}}
-  return {}; // {اسم الطريقة: نسبة مئوية}
+  if(saved){
+    try{
+      var f=JSON.parse(saved);
+      if(f&&typeof f==='object'&&Object.keys(f).length){
+        if(db){db.payFees=f;try{dbSave();}catch(e){}}
+        return f;
+      }
+    }catch(e){}
+  }
+  return {};
 }
-function savePayFees(fees){localStorage.setItem('woodstore_pay_fees',JSON.stringify(fees));}
+function savePayFees(fees){
+  if(db){db.payFees=fees;db.settingsMt=new Date().toISOString();}
+  localStorage.setItem('woodstore_pay_fees',JSON.stringify(fees)); // نسخة محلية احتياطية
+  try{dbSave();}catch(e){}
+}
 function payFeePct(method){var f=getPayFees();return (f[method]!==undefined&&f[method]!==null)?parseFloat(f[method])||0:0;}
 // يرجّع اللي يوصلك فعلياً بعد خصم العمولة
 function applyPayFee(amount,method){
@@ -7453,12 +7479,24 @@ function applyPayFee(amount,method){
   return {net:Math.round((amount-fee)*100)/100,fee:fee,pct:pct};
 }
 function getPayMethods(){
+  // 🔄 طرق الدفع إعداد مشترك بين كل الأجهزة → متخزّنة في db (بتتزامن)
+  if(db&&Array.isArray(db.payMethods)&&db.payMethods.length)return db.payMethods;
   var saved=localStorage.getItem('woodstore_pay_methods');
-  if(saved){try{return JSON.parse(saved);}catch(e){}}
+  if(saved){
+    try{
+      var m=JSON.parse(saved);
+      if(Array.isArray(m)&&m.length){
+        if(db){db.payMethods=m;try{dbSave();}catch(e){}}
+        return m;
+      }
+    }catch(e){}
+  }
   return DEFAULT_PAY_METHODS.slice();
 }
 function savePayMethods(methods){
+  if(db){db.payMethods=methods;db.settingsMt=new Date().toISOString();}
   localStorage.setItem('woodstore_pay_methods',JSON.stringify(methods));
+  try{dbSave();}catch(e){}
   fillAllPayDropdowns();
 }
 function fillAllPayDropdowns(){
