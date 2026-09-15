@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.35 — تسريع شامل: كل عرض البيعات والتقارير بيستخدم خريطة المخزون السريعة (يوليو 2026) -->
+<!-- v11.9.36 — تنظيم صفحة المخزون: فلاتر مرتبة في بطاقة + رأس أنظف (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -448,50 +448,58 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <div id="p-inv" class="pg">
   <div class="staff-only" style="display:none;background:#eef6ff;border:1px solid #cfe4fb;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem;color:#2c5d8a">📋 تقدر تعمل الجرد وتكتب التكعيب على كل رابطة — أسماء المصانع والموردين مخفية.</div>
   <div class="ph"><div><h2>📦 المخزون</h2></div>
-    <div style="display:flex;gap:6px">
-    <button class="btn bo" onclick="printBox('p-inv','المخزون')">🖨️ طباعة</button>
-    <button class="btn adm" id="audit-open-btn" style="background:#8e44ad;color:white" onclick="stockAuditToggle()">📋 جرد الرابطات المجهولة</button>
-    <input style="padding:7px 11px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.8rem" placeholder="🔍 بحث..." oninput="filt('inv-t',this.value)"></div></div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <input style="padding:7px 11px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.8rem;min-width:130px" placeholder="🔍 بحث سريع..." oninput="filt('inv-t',this.value)">
+    <button class="btn bo" style="font-size:0.78rem;padding:7px 12px" onclick="printBox('p-inv','المخزون')">🖨️ طباعة</button>
+    <button class="btn adm" id="audit-open-btn" style="background:#8e44ad;color:white;font-size:0.78rem;padding:7px 12px" onclick="stockAuditToggle()">📋 جرد المجهولة</button>
+    </div></div>
   <div id="stock-audit-box" class="card adm" style="display:none;margin-bottom:14px;border:2px solid #8e44ad"></div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">رقم الرابطة</label>
-      <input id="inv-f-num" placeholder="#رقم" oninput="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;width:80px">
+  <div class="card" style="padding:12px 14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <span style="font-size:0.85rem;font-weight:900;color:var(--dk)">🔎 فلاتر المخزون</span>
+      <button onclick="G('inv-f-num').value='';G('inv-f-spec').value='';G('inv-f-thick').value='';G('inv-f-len').value='';G('inv-f-pcs').value='';G('inv-f-pl').value='';G('inv-f-factory').value='';G('inv-f-truck').value='';if(G('inv-f-truck-q'))G('inv-f-truck-q').value='';invRender()" class="btn bo" style="font-size:0.75rem;padding:6px 12px">↺ مسح الفلتر</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">الدرجة</label>
-      <select id="inv-f-spec" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل الدرجات</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">سماكة اللوح</label>
-      <select id="inv-f-thick" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل السماكات</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">طول اللوح</label>
-      <select id="inv-f-len" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل الأطوال</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">عدد الألواح</label>
-      <select id="inv-f-pcs" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل الأعداد</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:transparent">x</label>
-      <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">Packing List</label>
-      <select id="inv-f-pl" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل الشحنات</option></select>
-      <select id="inv-f-factory" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل المصانع</option></select>
-      <input id="inv-f-truck-q" oninput="invRender()" placeholder="🔍 رقم العربية" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;width:110px">
-      <select id="inv-f-truck" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">🚚 كل العربيات</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:transparent">x</label>
-      <button onclick="G('inv-f-num').value='';G('inv-f-spec').value='';G('inv-f-thick').value='';G('inv-f-len').value='';G('inv-f-pcs').value='';G('inv-f-pl').value='';G('inv-f-factory').value='';G('inv-f-truck').value='';if(G('inv-f-truck-q'))G('inv-f-truck-q').value='';invRender()" class="btn bo" style="font-size:0.78rem;padding:7px 12px">مسح الفلتر</button>
-    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px">
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">رقم الرابطة</label>
+        <input id="inv-f-num" placeholder="#رقم" oninput="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white">
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">الدرجة</label>
+        <select id="inv-f-spec" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل الدرجات</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">سماكة اللوح</label>
+        <select id="inv-f-thick" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل السماكات</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">طول اللوح</label>
+        <select id="inv-f-len" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل الأطوال</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">عدد الألواح</label>
+        <select id="inv-f-pcs" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل الأعداد</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">الشحنة (Packing List)</label>
+        <select id="inv-f-pl" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل الشحنات</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0" class="adm">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">المصنع</label>
+        <select id="inv-f-factory" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل المصانع</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">🚚 رقم العربية</label>
+        <div style="display:flex;gap:4px">
+          <input id="inv-f-truck-q" oninput="invRender()" placeholder="🔍 دوّر" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;width:62px;flex:0 0 62px">
+          <select id="inv-f-truck" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;flex:1;min-width:0"><option value="">كل العربيات</option></select>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div style="margin-bottom:10px">
-    <button onclick="findDupBundles()" class="btn bo" style="font-size:0.8rem;padding:8px 14px">🔍 كشف الربط المكررة</button>
+  <div style="margin-bottom:10px;text-align:left">
+    <button onclick="findDupBundles()" class="btn bo" style="font-size:0.76rem;padding:6px 12px">🔍 كشف الربط المكررة</button>
     <div id="dup-result" style="margin-top:10px"></div>
   </div>
 
