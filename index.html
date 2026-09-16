@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.38 — الشريط الجانبي: القائمة كاملة ظاهرة + الأدوات النادرة في قسم قابل للطي (يوليو 2026) -->
+<!-- v11.9.41 — زر "شيك ارتد" (يرجّع المبلغ على المديونية ويحتفظ بالسجل) + تصدير إكسل شامل (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -458,6 +458,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
   <div class="ph"><div><h2>📦 المخزون</h2></div>
     <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
     <input style="padding:7px 11px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.8rem;min-width:130px" placeholder="🔍 بحث سريع..." oninput="filt('inv-t',this.value)">
+    <button class="btn bo" style="font-size:0.78rem;padding:7px 12px" onclick="exportPageXL('p-inv','المخزون')">📊 إكسل</button>
     <button class="btn bo" style="font-size:0.78rem;padding:7px 12px" onclick="printBox('p-inv','المخزون')">🖨️ طباعة</button>
     <button class="btn adm" id="audit-open-btn" style="background:#8e44ad;color:white;font-size:0.78rem;padding:7px 12px" onclick="stockAuditToggle()">📋 جرد المجهولة</button>
     </div></div>
@@ -707,6 +708,8 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <div id="p-cust" class="pg">
   <div class="ph"><div><h2>👥 العملاء</h2></div>
     <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-cust','العملاء')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-cust','العملاء')">🖨️ طباعة</button>
     <button class="btn bo" id="cu-reveal-btn" onclick="cuToggleReveal()">👁️ إظهار الكل</button>
     <button class="btn bp" onclick="cuShowAdd()">➕ عميل جديد</button></div></div>
   <div class="card" id="cu-add-card" style="display:none">
@@ -941,7 +944,11 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 </div>
 
 <div id="p-sum" class="pg">
-  <div class="ph"><div><h2>📊 الملخصات</h2></div></div>
+  <div class="ph"><div><h2>📊 الملخصات</h2></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-sum','الملخصات')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-sum','الملخصات')">🖨️ طباعة</button>
+    </div></div>
   <div>
 
     <!-- فلتر الفترة -->
@@ -1036,7 +1043,10 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <!-- REPORTS -->
 <div id="p-reports" class="pg">
   <div class="ph"><div><h2>📈 تقارير</h2><p>تحليلات المبيعات والعملاء</p></div>
-    <button class="btn bo" onclick="printBox('p-reports','التقارير الكاملة')">🖨️ طباعة كل التقارير</button></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-reports','التقارير')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-reports','التقارير الكاملة')">🖨️ طباعة</button>
+    </div></div>
   <div>
     <div class="card" style="margin-bottom:14px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1094,12 +1104,41 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
       <div id="rep-yearly"></div>
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="ch"><span class="ct">📊 جودة مقاسات المصانع (الرابطات المعاد تكعيبها)</span>
-        <div style="display:flex;gap:5px">
-          <button class="btn bo bs" onclick="exportBoxXL('rep-recut','جودة-المصانع','المصانع')">📊 إكسل</button>
+      <div class="ch"><span class="ct">📊 جودة مقاسات المصانع</span>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn bo bs" onclick="recutExportXL()">📊 إكسل</button>
           <button class="btn bo bs" onclick="printBox('rep-recut','جودة مقاسات المصانع')">🖨️ طباعة</button>
           <button class="btn bo bs adm" onclick="recutClear()">🗑️ تصفية</button>
         </div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px;padding:10px;background:#faf7f2;border-radius:10px">
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">المصنع</label>
+          <select id="rc-f-fac" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white"><option value="">كل المصانع</option></select>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">🚚 رقم العربية</label>
+          <select id="rc-f-truck" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white"><option value="">🚚 كل العربيات</option></select>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">المصدر</label>
+          <select id="rc-f-src" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white">
+            <option value="">الكل</option>
+            <option value="edit">✏️ تعديل يدوي</option>
+            <option value="audit">🏷️ جرد</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">من تاريخ</label>
+          <input type="date" id="rc-f-from" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white">
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">إلى تاريخ</label>
+          <input type="date" id="rc-f-to" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white">
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:flex-end">
+          <button class="btn bo" style="font-size:0.75rem;padding:6px" onclick="G('rc-f-fac').value='';if(G('rc-f-truck'))G('rc-f-truck').value='';G('rc-f-src').value='';G('rc-f-from').value='';G('rc-f-to').value='';recutReport()">↺ مسح</button>
+        </div>
+      </div>
       <div id="rep-recut-al"></div>
       <div id="rep-recut"></div>
     </div>
@@ -1108,7 +1147,11 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 
 <!-- CASHBOOK -->
 <div id="p-cash" class="pg">
-  <div class="ph"><div><h2>💵 اليومية</h2><p>سجل الحركات النقدية</p></div></div>
+  <div class="ph"><div><h2>💵 اليومية</h2><p>سجل الحركات النقدية</p></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-cash','اليومية')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-cash','اليومية')">🖨️ طباعة</button>
+    </div></div>
 
   <!-- أرصدة الحسابات -->
   <div id="cb-filter-label" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:0.8rem;font-weight:700;color:#856404;text-align:center">⚠️ الأرصدة محسوبة للفترة المفلترة فقط</div>
@@ -3430,6 +3473,7 @@ function _logRecut(inv,oldNet,newNet,src,saleId){
     num:String(inv.num||'🏷️'),
     spec:inv.spec||'',
     factory:inv.factory||'',
+    truck:String(inv.truck||''),
     thick:inv.thick||38,
     len:inv.len||'',
     pcs:inv.pcs||0,
@@ -5945,45 +5989,103 @@ function findDupBundles(){
 function recutReport(){
   var box=G('rep-recut');if(!box)return;
   var log=db.recutLog||[];
-  if(!log.length){box.innerHTML='<p style="color:#aaa;font-size:0.85rem;padding:8px">لسه مفيش رابطات معاد تكعيبها. كل ما تعدّل تكعيب رابطة (بزر ✏️ م³ أو في الجرد) هتظهر هنا مجمّعة بالمصنع.</p>';return;}
-  // تجميع بالمصنع
+  if(!log.length){box.innerHTML='<p style="color:#aaa;font-size:0.85rem;padding:8px">لسه مفيش رابطات معاد تكعيبها. كل ما تعدّل تكعيب رابطة هتظهر هنا مجمّعة بالمصنع.</p>';return;}
+  // ── الفلاتر ──
+  var fFac=(G('rc-f-fac')||{value:''}).value;
+  var fTrk=(G('rc-f-truck')||{value:''}).value;
+  var fSrc=(G('rc-f-src')||{value:''}).value;
+  var fFrom=(G('rc-f-from')||{value:''}).value;
+  var fTo=(G('rc-f-to')||{value:''}).value;
+  var rows=log.filter(function(r){
+    if(fFac&&(r.factory||'(بدون مصنع)')!==fFac)return false;
+    if(fTrk&&String(r.truck||'')!==fTrk)return false;
+    if(fSrc&&r.src!==fSrc)return false;
+    if(fFrom&&(r.dt||'')<fFrom)return false;
+    if(fTo&&(r.dt||'')>fTo)return false;
+    return true;
+  });
+  // قايمة المصانع (من كل السجل مش المفلتر)
+  var allFacs=[...new Set(log.map(function(r){return r.factory||'(بدون مصنع)';}))].sort();
+  var facSel=G('rc-f-fac');
+  if(facSel&&facSel.options.length!==allFacs.length+1){
+    var cur=facSel.value;
+    facSel.innerHTML='<option value="">كل المصانع</option>'+allFacs.map(function(f){return '<option value="'+escAttr(f)+'"'+(f===cur?' selected':'')+'>'+esc(f)+'</option>';}).join('');
+  }
+  var allTrks=[...new Set(log.map(function(r){return String(r.truck||'');}).filter(Boolean))].sort(function(a,b){return String(a).localeCompare(String(b),'ar',{numeric:true});});
+  var trkSel=G('rc-f-truck');
+  if(trkSel&&trkSel.options.length!==allTrks.length+1){
+    var curT=trkSel.value;
+    trkSel.innerHTML='<option value="">🚚 كل العربيات</option>'+allTrks.map(function(t){return '<option value="'+escAttr(t)+'"'+(t===curT?' selected':'')+'>🚚 '+esc(t)+'</option>';}).join('');
+  }
+  if(!rows.length){box.innerHTML='<p style="color:#aaa;font-size:0.85rem;padding:8px">مفيش نتائج بالفلاتر دي</p>';return;}
+  // ── التجميع بالمصنع ──
   var byFac={};
-  log.forEach(function(r){
+  rows.forEach(function(r){
     var f=r.factory||'(بدون مصنع)';
     if(!byFac[f])byFac[f]={cnt:0,totalDiff:0,deficit:0,surplus:0,items:[]};
-    byFac[f].cnt++;
-    byFac[f].totalDiff+=(r.diff||0);
-    if(r.diff<0)byFac[f].deficit+=Math.abs(r.diff);
-    else if(r.diff>0)byFac[f].surplus+=r.diff;
+    byFac[f].cnt++;byFac[f].totalDiff+=(r.diff||0);
+    if(r.diff<0)byFac[f].deficit+=Math.abs(r.diff);else if(r.diff>0)byFac[f].surplus+=r.diff;
     byFac[f].items.push(r);
   });
-  // ترتيب المصانع: الأسوأ أولاً (الأكثر عجزاً — أصغر متوسط)
-  var facs=Object.keys(byFac).sort(function(a,b){
-    return (byFac[a].totalDiff/byFac[a].cnt)-(byFac[b].totalDiff/byFac[b].cnt);
+  var facs=Object.keys(byFac).sort(function(a,b){return (byFac[a].totalDiff/byFac[a].cnt)-(byFac[b].totalDiff/byFac[b].cnt);});
+  // ── الملخص العلوي ──
+  var tDef=rows.filter(function(r){return r.diff<0;}).reduce(function(s2,r){return s2+Math.abs(r.diff);},0);
+  var tSur=rows.filter(function(r){return r.diff>0;}).reduce(function(s2,r){return s2+r.diff;},0);
+  var worst=facs.length?facs[0]:'—';
+  var worstAvg=facs.length?(byFac[worst].totalDiff/byFac[worst].cnt):0;
+  var h='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px">'
+    +'<div style="background:#fdecea;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #c0392b">'
+      +'<div style="font-size:1.15rem;font-weight:900;color:#c0392b">'+tDef.toFixed(3)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">م³ إجمالي العجز</div></div>'
+    +'<div style="background:#e8f7ef;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #1e6b3c">'
+      +'<div style="font-size:1.15rem;font-weight:900;color:#1e6b3c">'+tSur.toFixed(3)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">م³ إجمالي الزيادة</div></div>'
+    +'<div style="background:#f9f5f0;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #8a7a68">'
+      +'<div style="font-size:1.15rem;font-weight:900;color:var(--dk)">'+fmt(rows.length)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">رابطة معاد تكعيبها</div></div>'
+    +'<div style="background:#fff8ec;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #d4812a">'
+      +'<div style="font-size:0.88rem;font-weight:900;color:#b8792a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(worst)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">أسوأ مصنع ('+(worstAvg<0?'عجز '+Math.abs(worstAvg).toFixed(3):'+'+worstAvg.toFixed(3))+'/رابطة)</div></div>';
+  // 🚚 أسوأ عربية (لو فيه أرقام عربيات مسجلة)
+  var byTrk={};
+  rows.forEach(function(r){
+    var t=String(r.truck||'');if(!t)return;
+    if(!byTrk[t])byTrk[t]={cnt:0,tot:0};
+    byTrk[t].cnt++;byTrk[t].tot+=(r.diff||0);
   });
-  var h='<p style="font-size:0.78rem;color:#888;margin:0 0 12px">📉 مرتّبة من الأسوأ (أكتر عجز) للأحسن. العجز = التكعيب الجديد أقل من المسجّل (المصنع بيبالغ). الزيادة = العكس.</p>';
-  facs.forEach(function(f){
+  var trks=Object.keys(byTrk).sort(function(a,b){return (byTrk[a].tot/byTrk[a].cnt)-(byTrk[b].tot/byTrk[b].cnt);});
+  if(trks.length){
+    var wT=trks[0],wTAvg=byTrk[wT].tot/byTrk[wT].cnt;
+    h+='<div style="background:#eef4fb;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #2c5d8a">'
+      +'<div style="font-size:0.95rem;font-weight:900;color:#2c5d8a">🚚 '+esc(wT)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">أسوأ عربية ('+byTrk[wT].cnt+' رابطة، '+(wTAvg<0?'عجز '+Math.abs(wTAvg).toFixed(3):'+'+wTAvg.toFixed(3))+'/رابطة)</div></div>';
+  }
+  h+='</div>';
+  h+='<p style="font-size:0.74rem;color:#888;margin:0 0 10px">📉 مرتّبة من الأسوأ للأحسن — اضغط على أي مصنع تشوف تفاصيل رابطاته</p>';
+  // ── المصانع (قابلة للطي) ──
+  facs.forEach(function(f,fi){
     var d=byFac[f];
     var avg=d.totalDiff/d.cnt;
     var avgTxt=Math.abs(avg)<0.001?'مظبوط':(avg<0?('عجز '+Math.abs(avg).toFixed(3)+'/رابطة'):('زيادة '+avg.toFixed(3)+'/رابطة'));
     var badge=avg<-0.05?'🔴':(avg<-0.01?'🟠':(Math.abs(avg)<=0.01?'🟢':'🔵'));
-    var headColor=avg<-0.05?'#c0392b':(avg<-0.01?'#d4812a':(Math.abs(avg)<=0.01?'#1e6b3c':'#2c5d8a'));
-    h+='<div style="border:1px solid #e8ddd0;border-radius:10px;margin-bottom:10px;overflow:hidden">'
-      +'<div style="background:#faf7f2;padding:10px 12px;border-bottom:1px solid #eee">'
+    var col=avg<-0.05?'#c0392b':(avg<-0.01?'#d4812a':(Math.abs(avg)<=0.01?'#1e6b3c':'#2c5d8a'));
+    var bid='rcf-'+fi;
+    h+='<div style="border:1px solid #e8ddd0;border-radius:10px;margin-bottom:8px;overflow:hidden">'
+      +'<div onclick="rcToggle(\''+bid+'\')" style="background:#faf7f2;padding:10px 12px;cursor:pointer;user-select:none">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
-      +'<b style="font-size:0.95rem;color:'+headColor+'">'+badge+' '+esc(f)+'</b>'
-      +'<span style="font-size:0.82rem;font-weight:900;color:'+headColor+'">'+avgTxt+'</span></div>'
-      +'<div style="font-size:0.74rem;color:#777;margin-top:4px">'+d.cnt+' رابطة | إجمالي عجز: <b style="color:#c0392b">'+d.deficit.toFixed(3)+'</b> م³ | إجمالي زيادة: <b style="color:#1e6b3c">'+d.surplus.toFixed(3)+'</b> م³ | صافي: <b>'+(d.totalDiff>=0?'+':'')+d.totalDiff.toFixed(3)+'</b> م³</div>'
-      +'</div>';
-    // تفاصيل كل رابطة
-    h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.75rem">'
-      +'<thead><tr style="background:#f5f0e8"><th style="padding:5px">التاريخ</th><th style="padding:5px">الرقم</th><th style="padding:5px">النوع</th><th style="padding:5px">الطول</th><th style="padding:5px">قديم</th><th style="padding:5px">جديد</th><th style="padding:5px">الفرق</th><th style="padding:5px">المصدر</th></tr></thead><tbody>';
+      +'<b style="font-size:0.92rem;color:'+col+'"><span id="'+bid+'-ar">▾</span> '+badge+' '+esc(f)+'</b>'
+      +'<span style="font-size:0.8rem;font-weight:900;color:'+col+'">'+avgTxt+'</span></div>'
+      +'<div style="font-size:0.72rem;color:#777;margin-top:4px">'+d.cnt+' رابطة | عجز: <b style="color:#c0392b">'+d.deficit.toFixed(3)+'</b> | زيادة: <b style="color:#1e6b3c">'+d.surplus.toFixed(3)+'</b> | صافي: <b>'+(d.totalDiff>=0?'+':'')+d.totalDiff.toFixed(3)+'</b> م³</div>'
+      +'</div>'
+      +'<div id="'+bid+'" style="display:none"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.74rem">'
+      +'<thead><tr style="background:#f5f0e8"><th style="padding:5px">التاريخ</th><th style="padding:5px">الرقم</th><th style="padding:5px">🚚 عربية</th><th style="padding:5px">النوع</th><th style="padding:5px">الطول</th><th style="padding:5px">قديم</th><th style="padding:5px">جديد</th><th style="padding:5px">الفرق</th><th style="padding:5px">المصدر</th></tr></thead><tbody>';
     d.items.slice().reverse().forEach(function(r){
       var dc=r.diff<-0.001?'#c0392b':(r.diff>0.001?'#1e6b3c':'#888');
       var dt2=r.diff<-0.001?('عجز '+Math.abs(r.diff).toFixed(3)):(r.diff>0.001?('+'+r.diff.toFixed(3)):'مطابق');
       h+='<tr style="border-bottom:1px solid #f5f0e8">'
         +'<td style="padding:5px;text-align:center;color:#999;white-space:nowrap">'+r.dt+'</td>'
         +'<td style="padding:5px;text-align:center"><b>'+(r.num==='🏷️'?'🏷️':'#'+esc(r.num))+'</b></td>'
+        +'<td style="padding:5px;text-align:center"><span style="background:#eef4fb;color:#2c5d8a;padding:1px 6px;border-radius:5px;font-weight:700;font-size:0.7rem">'+(r.truck?esc(String(r.truck)):'—')+'</span></td>'
         +'<td style="padding:5px;text-align:center">'+esc(r.spec)+'</td>'
         +'<td style="padding:5px;text-align:center">'+esc(String(r.len))+'</td>'
         +'<td style="padding:5px;text-align:center;color:#999">'+(r.oldNet||0).toFixed(3)+'</td>'
@@ -5992,9 +6094,44 @@ function recutReport(){
         +'<td style="padding:5px;text-align:center;font-size:0.68rem;color:#999">'+(r.src==='audit'?'🏷️ جرد':'✏️ تعديل')+'</td>'
         +'</tr>';
     });
-    h+='</tbody></table></div></div>';
+    h+='</tbody></table></div></div></div>';
   });
   box.innerHTML=h;
+}
+function rcToggle(id){
+  var d=document.getElementById(id),a=document.getElementById(id+'-ar');
+  if(!d)return;
+  var on=d.style.display==='none';
+  d.style.display=on?'block':'none';
+  if(a)a.textContent=on?'▴':'▾';
+}
+function recutExportXL(){
+  var log=(db.recutLog||[]);
+  var fFac=(G('rc-f-fac')||{value:''}).value,fSrc=(G('rc-f-src')||{value:''}).value;
+  var fTrk=(G('rc-f-truck')||{value:''}).value;
+  var fFrom=(G('rc-f-from')||{value:''}).value,fTo=(G('rc-f-to')||{value:''}).value;
+  var rows=log.filter(function(r){
+    if(fFac&&(r.factory||'(بدون مصنع)')!==fFac)return false;
+    if(fTrk&&String(r.truck||'')!==fTrk)return false;
+    if(fSrc&&r.src!==fSrc)return false;
+    if(fFrom&&(r.dt||'')<fFrom)return false;
+    if(fTo&&(r.dt||'')>fTo)return false;
+    return true;
+  });
+  if(!rows.length)return alert('مفيش بيانات للتصدير');
+  try{
+    var data=[['التاريخ','المصنع','رقم العربية','رقم الرابطة','النوع','السماكة','الطول','العدد','التكعيب القديم','التكعيب الجديد','الفرق','عجز/زيادة','المصدر']];
+    rows.slice().reverse().forEach(function(r){
+      data.push([r.dt||'',r.factory||'(بدون مصنع)',r.truck||'',r.num||'',r.spec||'',r.thick||'',r.len||'',r.pcs||0,
+        r.oldNet||0,r.newNet||0,r.diff||0,
+        (r.diff<-0.001?'عجز':(r.diff>0.001?'زيادة':'مطابق')),
+        (r.src==='audit'?'جرد':'تعديل يدوي')]);
+    });
+    var wb=XLSX.utils.book_new();
+    var ws=XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb,ws,'جودة المصانع');
+    XLSX.writeFile(wb,'جودة-مقاسات-المصانع-'+todayLocal()+'.xlsx');
+  }catch(e){alert('تعذر التصدير: '+e.message);}
 }
 function yearlyStatsRender(){
   var box=G('rep-yearly');if(!box)return;
@@ -7407,6 +7544,60 @@ function payMethodChange(){
   var v=(G('pay-method')||{}).value;
   var f=G('pay-chq-fields');if(f)f.style.display=v==='شيك'?'block':'none';
 }
+function chqBounce(chqId){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
+  if(!db.cheques)return;
+  var chq=db.cheques.find(function(x){return x.id===chqId;});
+  if(!chq)return;
+  if(chq.status==='bounced')return alert('الشيك ده معلّم مرتد بالفعل');
+  var msg='❌ تعليم الشيك كمرتد؟\n\n';
+  msg+='العميل: '+chq.cnm+'\nالمبلغ: '+fmt(chq.amt)+' ج\n';
+  msg+='الاستحقاق: '+(chq.due||chq.dt)+'\n\n';
+  if(chq.status==='collected')msg+='⚠️ الشيك ده كان متحصّل — هيترجع المبلغ من الخزنة.\n\n';
+  msg+='هيحصل إيه:\n';
+  msg+='• المبلغ يرجع على مديونية العميل\n';
+  msg+='• الشيك يفضل مسجّل بعلامة "مرتد" (مش هيتحذف)\n';
+  if(chq.status==='collected')msg+='• حركة التحصيل تتشال من اليومية\n';
+  if(!confirm(msg))return;
+  dbSaveUndo('شيك مرتد');
+  var wasCollected=(chq.status==='collected');
+  chq.status='bounced';
+  chq.bouncedDt=todayLocal();
+  chq.mt=new Date().toISOString();
+  // لو كان متحصّل: شيل حركة اليومية (الفلوس مدخلتش فعلاً)
+  if(wasCollected){
+    db.cashbook=(db.cashbook||[]).filter(function(e){return e.ref!==chqId;});
+    try{trackDeleteCb(chqId);}catch(e){}
+  }
+  // ارجع المبلغ على مديونية العميل: امسح الدفعة المرتبطة بالشيك
+  if(chq.cid&&chq.payId){
+    var cu=db.custs.find(function(c){return c.id===chq.cid;});
+    if(cu&&cu.payments){
+      var pp=cu.payments.find(function(p){return p.id===chq.payId;});
+      if(pp){
+        try{trackDelete(chq.payId);}catch(e){}
+        cu.payments=cu.payments.filter(function(p){return p.id!==chq.payId;});
+      }
+      cu.debt=cuCalcDebt(cu);cu.mt=new Date().toISOString();
+    }
+  }
+  dbSave();chqRenderCusts();
+  try{cuRender();}catch(e){}
+  try{if(typeof _cuId!=='undefined'&&_cuId===chq.cid)cuOpen(_cuId);}catch(e){}
+  try{auditLog('شيك مرتد',chq.cnm+' — '+fmt(chq.amt)+' ج'+(wasCollected?' (كان متحصّل)':''));}catch(e){}
+  _beep();
+  showAl('cu-al','❌ اتعلّم الشيك كمرتد — المبلغ ('+fmt(chq.amt)+' ج) رجع على مديونية '+chq.cnm,false);
+}
+function chqUnbounce(chqId){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
+  var chq=(db.cheques||[]).find(function(x){return x.id===chqId;});
+  if(!chq||chq.status!=='bounced')return;
+  if(!confirm('🔄 رجّع الشيك لحالة "معلّق"؟\n\n(استخدمها لو العميل سدّده أو اتحل الموضوع)'))return;
+  chq.status='pending';chq.bouncedDt='';chq.mt=new Date().toISOString();
+  dbSave();chqRenderCusts();
+  try{auditLog('إلغاء ارتداد شيك',chq.cnm+' — '+fmt(chq.amt)+' ج');}catch(e){}
+  showAl('cu-al','✅ رجع الشيك لحالة معلّق',true);
+}
 function chqCollect(chqId){
   if(!db.cheques)return;
   var chq=db.cheques.find(function(x){return x.id===chqId;});
@@ -7447,7 +7638,14 @@ function chqDel(chqId){
 function chqRenderCusts(){
   var section=G('cu-chq-section');if(!section)return;
   if(!db.cheques)db.cheques=[];
-  var pending=db.cheques.filter(function(c){return c.status==='pending';});
+  // المعلّقة + المرتدة (المرتدة بتفضل ظاهرة بعلامتها عشان تتابعها)
+  var pending=db.cheques.filter(function(c){return c.status==='pending'||c.status==='bounced';});
+  // المرتدة تظهر الأول (محتاجة متابعة)
+  pending.sort(function(a,b){
+    var ab=(a.status==='bounced')?0:1, bb=(b.status==='bounced')?0:1;
+    if(ab!==bb)return ab-bb;
+    return String(a.due||a.dt).localeCompare(String(b.due||b.dt));
+  });
   if(!pending.length){section.style.display='none';return;}
   section.style.display='block';
   var today=todayLocal();
@@ -7462,11 +7660,15 @@ function chqRenderCusts(){
     var dueLabel=isOverdue?'<span style="color:#c0392b;font-weight:900">⚠️ متأخر '+Math.abs(daysLeft)+' يوم</span>':
       daysLeft<=7?'<span style="color:#e67e22;font-weight:700">⏰ باقي '+daysLeft+' يوم</span>':
       '<span style="color:#888">باقي '+daysLeft+' يوم</span>';
-    return '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;border:2px solid '+(isOverdue?'#c0392b':'#e8ddd0')+';background:'+(isOverdue?'#fdecea':'white')+'">'+
+    var isBounced=(c.status==='bounced');
+    return '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;border:2px solid '+(isBounced?'#8e2020':(isOverdue?'#c0392b':'#e8ddd0'))+';background:'+(isBounced?'#fbe3e3':(isOverdue?'#fdecea':'white'))+(isBounced?';opacity:0.92':'')+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'+
-        '<div><strong>'+esc(c.cnm)+'</strong> <span style="font-weight:900;color:#c0392b">'+fmt(c.amt)+' ج</span></div>'+
+        '<div>'+(isBounced?'<span style="background:#8e2020;color:white;font-size:0.65rem;padding:2px 7px;border-radius:5px;font-weight:900;margin-inline-end:5px">❌ مرتد</span>':'')+'<strong>'+esc(c.cnm)+'</strong> <span style="font-weight:900;color:#c0392b">'+fmt(c.amt)+' ج</span></div>'+
         '<div style="display:flex;gap:4px">'+
-          '<button class="btn bg_" style="font-size:0.7rem;padding:4px 10px;touch-action:manipulation" onclick="chqCollect(&quot;'+c.id+'&quot;)">✅ تحصيل</button>'+
+          (c.status==='bounced'
+            ?'<button class="btn bo" style="font-size:0.68rem;padding:4px 8px;touch-action:manipulation" onclick="chqUnbounce(&quot;'+c.id+'&quot;)">🔄 إلغاء الارتداد</button>'
+            :'<button class="btn bg_" style="font-size:0.7rem;padding:4px 10px;touch-action:manipulation" onclick="chqCollect(&quot;'+c.id+'&quot;)">✅ تحصيل</button>'
+             +'<button class="btn" style="font-size:0.68rem;padding:4px 8px;background:#c0392b;color:white;touch-action:manipulation" onclick="chqBounce(&quot;'+c.id+'&quot;)">❌ ارتد</button>')+
           '<button class="btn bd" style="font-size:0.65rem;padding:4px 6px;touch-action:manipulation" onclick="chqDel(&quot;'+c.id+'&quot;)">X</button>'+
         '</div>'+
       '</div>'+
@@ -7489,6 +7691,29 @@ function tableToXL(tableEl,fileName,sheetName){
     var wb=XLSX.utils.book_new();
     var ws=XLSX.utils.table_to_sheet(tableEl,{raw:false});
     XLSX.utils.book_append_sheet(wb,ws,(sheetName||'بيانات').slice(0,30));
+    XLSX.writeFile(wb,(fileName||'تقرير')+'-'+todayLocal()+'.xlsx');
+  }catch(e){alert('تعذر التصدير: '+e.message);}
+}
+function exportPageXL(pageId,fileName){
+  // تصدير كل جداول الصفحة — كل جدول في شيت
+  var pg=document.getElementById(pageId);if(!pg)return alert('الصفحة مش موجودة');
+  var tables=pg.querySelectorAll('table');
+  if(!tables.length)return alert('مفيش جداول للتصدير في الصفحة دي');
+  try{
+    var wb=XLSX.utils.book_new(),added=0;
+    tables.forEach(function(t,i){
+      if(!t.querySelector('tbody tr'))return; // جدول فاضي
+      var nm='';
+      // ندوّر على عنوان قريب
+      var card=t.closest('.card');
+      if(card){var ct=card.querySelector('.ct');if(ct)nm=ct.textContent.replace(/[\\\/\?\*\[\]:]/g,'').trim().slice(0,28);}
+      if(!nm)nm='جدول '+(i+1);
+      var base=nm,k=2;
+      while(wb.SheetNames.indexOf(nm)>=0){nm=base.slice(0,26)+'-'+k;k++;}
+      XLSX.utils.book_append_sheet(wb,XLSX.utils.table_to_sheet(t,{raw:false}),nm);
+      added++;
+    });
+    if(!added)return alert('مفيش بيانات للتصدير');
     XLSX.writeFile(wb,(fileName||'تقرير')+'-'+todayLocal()+'.xlsx');
   }catch(e){alert('تعذر التصدير: '+e.message);}
 }
@@ -7955,7 +8180,11 @@ try{sbMoreInit();}catch(e){}
 </div>
 <!-- WORKERS -->
 <div id="p-workers" class="pg">
-  <div class="ph"><div><h2>👷 العمال والمصاريف</h2></div></div>
+  <div class="ph"><div><h2>👷 العمال والمصاريف</h2></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-workers','العمال-والمصاريف')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-workers','العمال والمصاريف')">🖨️ طباعة</button>
+    </div></div>
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--pale)">
     <button id="wtab-workers" onclick="wTab('workers')" style="flex:1;padding:12px;border:none;border-bottom:3px solid var(--dk);background:white;font-family:Cairo,sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;color:var(--dk);touch-action:manipulation">👷 العمال</button>
     <button id="wtab-exp" onclick="wTab('exp')" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:white;font-family:Cairo,sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;color:#888;touch-action:manipulation">🚗 المصاريف</button>
