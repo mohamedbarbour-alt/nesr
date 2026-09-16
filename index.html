@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.37 — تسريع المخزون: تأخير ذكي للبحث + تخزين مؤقت للفلاتر + تسريع recalcInv (يوليو 2026) -->
+<!-- v11.9.38 — الشريط الجانبي: القائمة كاملة ظاهرة + الأدوات النادرة في قسم قابل للطي (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -19,11 +19,14 @@ html{font-size:var(--fs,16px);}body{font-family:'Cairo',sans-serif;background:va
 .sb-logo span{font-size:1.4rem;}
 .sb-logo h1{color:var(--pale);font-size:0.88rem;font-weight:900;}
 .sb-logo p{display:none;}
-.sb-nav{flex:1 1 auto;min-height:250px;padding:6px 6px;display:flex;flex-direction:column;gap:1px;overflow-y:auto;}
+.sb-nav{flex:1 1 auto;min-height:0;padding:6px 6px;display:flex;flex-direction:column;gap:1px;overflow-y:auto;}
 .nb{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;border:none;background:transparent;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0);touch-action:manipulation;color:rgba(232,196,154,0.75);font-family:'Cairo',sans-serif;font-size:0.8rem;font-weight:600;width:100%;text-align:right;transition:all 0.2s;}
 .nb:hover{background:rgba(255,255,255,0.08);color:var(--pale);}
 .nb.on{background:var(--ac);color:#fff;}
-.sb-foot{flex:0 0 auto;padding:6px 8px;border-top:1px solid rgba(255,255,255,0.1);max-height:52vh;overflow-y:auto;}
+.sb-foot{flex:0 0 auto;padding:5px 8px;border-top:1px solid rgba(255,255,255,0.1);max-height:none;}
+.sb-more{display:none;}
+.sb-more.on{display:block;}
+.sb-more-btn{width:100%;background:rgba(255,255,255,0.05);color:rgba(232,196,154,0.65);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.65rem;cursor:pointer;margin-top:5px;}
 .dt{background:rgba(255,255,255,0.08);border-radius:7px;padding:5px;text-align:center;color:rgba(232,196,154,0.6);font-size:0.65rem;}
 .main{margin-right:220px;padding:20px;-webkit-overflow-scrolling:touch;}
 .pg{display:none;}
@@ -252,25 +255,30 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
   <div class="sb-foot">
     <div class="dt" id="dt"></div>
     <div id="sync-indicator" onclick="updateSyncIndicator()" style="margin-top:6px;padding:5px 8px;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;text-align:center;cursor:pointer;background:rgba(42,125,79,0.12);color:#2a7d4f;transition:all 0.3s">🟢 متزامن</div>
-    <div style="display:flex;gap:4px;justify-content:center;margin:6px 0">
-      <button onclick="fsChange(-1)" title="تصغير الخط" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.8rem;font-weight:900;cursor:pointer">A−</button>
-      <button onclick="fsChange(0)" title="الحجم الافتراضي" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.7rem;cursor:pointer">↺</button>
-      <button onclick="fsChange(1)" title="تكبير الخط" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.95rem;font-weight:900;cursor:pointer">A+</button>
-    </div>
     <div id="who-badge" style="margin-top:4px;font-family:Cairo,sans-serif;font-size:0.58rem;text-align:center;color:#c9b8a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
     <button onclick="doLogout()" style="margin-top:4px;width:100%;background:rgba(192,57,43,0.18);color:#e8b4a8;border:none;border-radius:6px;padding:5px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">🚪 تسجيل خروج</button>
-    <div style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
-      <button onclick="dbBackup()" style="padding:6px;background:#2a7d4f;color:white;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">💾 حفظ</button>
-      <div style="position:relative">
-        <input type="file" id="db-ri" accept=".json,application/json" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden" onchange="dbRestoreFile(this)">
-        <label for="db-ri" style="display:block;padding:6px;background:rgba(255,255,255,0.1);color:#e8c49a;border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer;text-align:center;box-sizing:border-box;-webkit-tap-highlight-color:rgba(0,0,0,0);touch-action:manipulation">📂 استعادة</label>
-      </div>
+    <div style="margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
       <button onclick="manualSync()" id="sync-btn" style="padding:6px;background:#2980b9;color:white;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,0)">☁️ رفع</button>
-      <button onclick="dbStats()" style="padding:6px;background:rgba(255,255,255,0.06);color:rgba(232,196,154,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;cursor:pointer">📊 التخزين</button>
+      <button onclick="dbBackup()" style="padding:6px;background:#2a7d4f;color:white;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">💾 حفظ</button>
     </div>
-    <button onclick="dbRestoreSnap()" style="width:100%;padding:4px;margin-top:4px;background:rgba(255,255,255,0.04);color:rgba(232,196,154,0.5);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.62rem;cursor:pointer">🔄 نسخ تلقائية</button>
-    <button onclick="dbPullRemote()" style="width:100%;padding:4px;margin-top:4px;background:rgba(255,255,255,0.04);color:rgba(232,196,154,0.5);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.62rem;cursor:pointer">⬇️ سحب من السيرفر</button>
-    <div id="backup-status" style="font-size:0.6rem;color:rgba(232,196,154,0.5);text-align:center;min-height:12px;margin-top:2px"></div>
+    <button class="sb-more-btn" onclick="sbToggleMore()" id="sb-more-btn">⚙️ أدوات أكتر ▾</button>
+    <div class="sb-more" id="sb-more">
+      <div style="margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <div style="position:relative">
+          <input type="file" id="db-ri" accept=".json,application/json" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden" onchange="dbRestoreFile(this)">
+          <label for="db-ri" style="display:block;padding:6px;background:rgba(255,255,255,0.1);color:#e8c49a;border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.66rem;font-weight:700;cursor:pointer;text-align:center;box-sizing:border-box;touch-action:manipulation">📂 استعادة</label>
+        </div>
+        <button onclick="dbStats()" style="padding:6px;background:rgba(255,255,255,0.06);color:rgba(232,196,154,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.66rem;cursor:pointer">📊 التخزين</button>
+      </div>
+      <button onclick="dbRestoreSnap()" style="width:100%;padding:5px;margin-top:4px;background:rgba(255,255,255,0.04);color:rgba(232,196,154,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.63rem;cursor:pointer">🔄 نسخ تلقائية</button>
+      <button onclick="dbPullRemote()" style="width:100%;padding:5px;margin-top:4px;background:rgba(255,255,255,0.04);color:rgba(232,196,154,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.63rem;cursor:pointer">⬇️ سحب من السيرفر</button>
+      <div style="display:flex;gap:4px;justify-content:center;margin-top:5px">
+        <button onclick="fsChange(-1)" title="تصغير الخط" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.78rem;font-weight:900;cursor:pointer">A−</button>
+        <button onclick="fsChange(0)" title="الحجم الافتراضي" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.68rem;cursor:pointer">↺</button>
+        <button onclick="fsChange(1)" title="تكبير الخط" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.92rem;font-weight:900;cursor:pointer">A+</button>
+      </div>
+      <div id="backup-status" style="font-size:0.6rem;color:rgba(232,196,154,0.5);text-align:center;min-height:12px;margin-top:3px"></div>
+    </div>
   </div>
 </aside>
 <button id="undo-btn" onclick="dbUndo()" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#e67e22;color:white;border:none;border-radius:12px;padding:10px 24px;font-family:Cairo,sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;touch-action:manipulation;box-shadow:0 4px 16px rgba(0,0,0,0.3)">↩️ تراجع</button>
@@ -6862,6 +6870,21 @@ function cuToggleReveal(){
   if(btn)btn.textContent=on?'🙈 إخفاء الكل':'👁️ إظهار الكل';
 }
 function _reapplyReveal(){if(window._cuRevealAll){var p=document.getElementById('p-cust');if(p){p.querySelectorAll('.cu-blur-cell').forEach(function(el){el.classList.add('shown');});p.querySelectorAll('.sc').forEach(function(el){el.classList.add('revealed');});}}}
+function sbToggleMore(){
+  var d=document.getElementById('sb-more'),b=document.getElementById('sb-more-btn');
+  if(!d)return;
+  var on=d.classList.toggle('on');
+  if(b)b.textContent=on?'⚙️ أدوات أكتر ▴':'⚙️ أدوات أكتر ▾';
+  try{localStorage.setItem('woodstore_sb_more',on?'1':'0');}catch(e){}
+}
+function sbMoreInit(){
+  try{
+    if(localStorage.getItem('woodstore_sb_more')==='1'){
+      var d=document.getElementById('sb-more'),b=document.getElementById('sb-more-btn');
+      if(d){d.classList.add('on');if(b)b.textContent='⚙️ أدوات أكتر ▴';}
+    }
+  }catch(e){}
+}
 function fsChange(dir){
   var cur=parseInt(localStorage.getItem('woodstore_fs')||'16');
   if(dir===0)cur=16; else cur=Math.max(12,Math.min(22,cur+dir));
@@ -7863,6 +7886,7 @@ async function setChangePass(){
 })();
 
 try{fsInit();}catch(e){}
+try{sbMoreInit();}catch(e){}
 </script>
 
 
