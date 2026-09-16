@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.36 — تنظيم صفحة المخزون: فلاتر مرتبة في بطاقة + رأس أنظف (يوليو 2026) -->
+<!-- v11.9.37 — تسريع المخزون: تأخير ذكي للبحث + تخزين مؤقت للفلاتر + تسريع recalcInv (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -462,7 +462,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px">
       <div style="display:flex;flex-direction:column;min-width:0">
         <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">رقم الرابطة</label>
-        <input id="inv-f-num" placeholder="#رقم" oninput="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white">
+        <input id="inv-f-num" placeholder="#رقم" oninput="invRenderLazy()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white">
       </div>
       <div style="display:flex;flex-direction:column;min-width:0">
         <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">الدرجة</label>
@@ -491,7 +491,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
       <div style="display:flex;flex-direction:column;min-width:0">
         <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">🚚 رقم العربية</label>
         <div style="display:flex;gap:4px">
-          <input id="inv-f-truck-q" oninput="invRender()" placeholder="🔍 دوّر" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;width:62px;flex:0 0 62px">
+          <input id="inv-f-truck-q" oninput="invRenderLazy()" placeholder="🔍 دوّر" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;width:62px;flex:0 0 62px">
           <select id="inv-f-truck" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;flex:1;min-width:0"><option value="">كل العربيات</option></select>
         </div>
       </div>
@@ -2076,11 +2076,16 @@ function recalcInv(){
   // عدّاد كام فاتورة (غير مرتجعة) بايعة كل رابطة — عشان نكشف لو نفس الرابطة اتباعت مرتين
   var activeCount={};
   (db.sales||[]).forEach(function(sale){
+    // ⚡ خريطة المرتجعات مرة واحدة لكل فاتورة (بدل filter لكل سطر — أسرع بكتير)
+    var _retMap=null;
+    if(sale.retLines&&sale.retLines.length){
+      _retMap={};
+      sale.retLines.forEach(function(r){_retMap[r.invId]=(_retMap[r.invId]||0)+(r.qty||0);});
+    }
     (sale.lines||[]).forEach(function(ln){
       var it=invMap[ln.invId];
       if(!it)return;
-      // هل اترجع البند ده من الفاتورة دي بالذات؟ (نربط المرتجع بفاتورته بدل ما يفتح الرابطة على طول)
-      var retQty=(sale.retLines||[]).filter(function(r){return r.invId===ln.invId;}).reduce(function(s,r){return s+(r.qty||0);},0);
+      var retQty=_retMap?(_retMap[ln.invId]||0):0;
       var soldQty=ln.qty||1;
       if(retQty<soldQty){it.avail=0;activeCount[ln.invId]=(activeCount[ln.invId]||0)+1;}
     });
@@ -2828,8 +2833,15 @@ function stockAuditForce(idx){
   dashRender();invRender();stockAuditOpen();
   showAl('inv-al','✅ اتسوّت الرابطة يدوياً',true);
 }
+var _invRenderTimer=null;
+function invRenderLazy(){
+  // ⚡ تأخير ذكي: تستنى 250ms بعد آخر حرف بدل إعادة رسم مع كل ضغطة
+  if(_invRenderTimer)clearTimeout(_invRenderTimer);
+  _invRenderTimer=setTimeout(function(){_invRenderTimer=null;invRender();},250);
+}
 function invRender(){
-  recalcInv();
+  // recalcInv تقيلة (بتلف على كل البيعات) — منناديهاش إلا لو فيه تغيير فعلي
+  if(typeof _invDirty==='undefined'||_invDirty)recalcInv();
   var av=db.inv.filter(function(i){return i.avail>0;});
   // القيم المختارة حالياً
   var _fs=(G('inv-f-spec')||{value:''}).value;
@@ -2840,8 +2852,10 @@ function invRender(){
   var _ffc=(G('inv-f-factory')||{value:''}).value;
   var _ftr=(G('inv-f-truck')||{value:''}).value;
   // 🔗 فلاتر مترابطة: كل قايمة بتتبني من المتاح بعد باقي الفلاتر (من غير فلتر نفسها)
+  var _poolCache={};
   function _pool(skip){
-    return av.filter(function(i){
+    if(_poolCache[skip])return _poolCache[skip];
+    return _poolCache[skip]=av.filter(function(i){
       if(skip!=='spec'&&_fs&&i.spec!==_fs)return false;
       if(skip!=='thick'&&_ft&&String(i.thick||38)!==_ft)return false;
       if(skip!=='len'&&_fl&&i.len!==_fl)return false;
