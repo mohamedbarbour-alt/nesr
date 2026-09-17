@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.30 — طرق الدفع والعمولة بقت إعدادات مشتركة بتتزامن بين كل الأجهزة (يوليو 2026) -->
+<!-- v11.9.43 — إصلاح حرج: خطأ كان بيفضّي صفحة التقارير كلها (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -19,11 +19,14 @@ html{font-size:var(--fs,16px);}body{font-family:'Cairo',sans-serif;background:va
 .sb-logo span{font-size:1.4rem;}
 .sb-logo h1{color:var(--pale);font-size:0.88rem;font-weight:900;}
 .sb-logo p{display:none;}
-.sb-nav{flex:1 1 auto;min-height:250px;padding:6px 6px;display:flex;flex-direction:column;gap:1px;overflow-y:auto;}
+.sb-nav{flex:1 1 auto;min-height:0;padding:6px 6px;display:flex;flex-direction:column;gap:1px;overflow-y:auto;}
 .nb{display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:8px;border:none;background:transparent;cursor:pointer;-webkit-tap-highlight-color:rgba(0,0,0,0);touch-action:manipulation;color:rgba(232,196,154,0.75);font-family:'Cairo',sans-serif;font-size:0.8rem;font-weight:600;width:100%;text-align:right;transition:all 0.2s;}
 .nb:hover{background:rgba(255,255,255,0.08);color:var(--pale);}
 .nb.on{background:var(--ac);color:#fff;}
-.sb-foot{flex:0 0 auto;padding:6px 8px;border-top:1px solid rgba(255,255,255,0.1);max-height:52vh;overflow-y:auto;}
+.sb-foot{flex:0 0 auto;padding:5px 8px;border-top:1px solid rgba(255,255,255,0.1);max-height:none;}
+.sb-more{display:none;}
+.sb-more.on{display:block;}
+.sb-more-btn{width:100%;background:rgba(255,255,255,0.05);color:rgba(232,196,154,0.65);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.65rem;cursor:pointer;margin-top:5px;}
 .dt{background:rgba(255,255,255,0.08);border-radius:7px;padding:5px;text-align:center;color:rgba(232,196,154,0.6);font-size:0.65rem;}
 .main{margin-right:220px;padding:20px;-webkit-overflow-scrolling:touch;}
 .pg{display:none;}
@@ -252,25 +255,30 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
   <div class="sb-foot">
     <div class="dt" id="dt"></div>
     <div id="sync-indicator" onclick="updateSyncIndicator()" style="margin-top:6px;padding:5px 8px;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;text-align:center;cursor:pointer;background:rgba(42,125,79,0.12);color:#2a7d4f;transition:all 0.3s">🟢 متزامن</div>
-    <div style="display:flex;gap:4px;justify-content:center;margin:6px 0">
-      <button onclick="fsChange(-1)" title="تصغير الخط" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.8rem;font-weight:900;cursor:pointer">A−</button>
-      <button onclick="fsChange(0)" title="الحجم الافتراضي" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.7rem;cursor:pointer">↺</button>
-      <button onclick="fsChange(1)" title="تكبير الخط" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.95rem;font-weight:900;cursor:pointer">A+</button>
-    </div>
     <div id="who-badge" style="margin-top:4px;font-family:Cairo,sans-serif;font-size:0.58rem;text-align:center;color:#c9b8a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
     <button onclick="doLogout()" style="margin-top:4px;width:100%;background:rgba(192,57,43,0.18);color:#e8b4a8;border:none;border-radius:6px;padding:5px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">🚪 تسجيل خروج</button>
-    <div style="margin-top:6px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
-      <button onclick="dbBackup()" style="padding:6px;background:#2a7d4f;color:white;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">💾 حفظ</button>
-      <div style="position:relative">
-        <input type="file" id="db-ri" accept=".json,application/json" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden" onchange="dbRestoreFile(this)">
-        <label for="db-ri" style="display:block;padding:6px;background:rgba(255,255,255,0.1);color:#e8c49a;border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer;text-align:center;box-sizing:border-box;-webkit-tap-highlight-color:rgba(0,0,0,0);touch-action:manipulation">📂 استعادة</label>
-      </div>
+    <div style="margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
       <button onclick="manualSync()" id="sync-btn" style="padding:6px;background:#2980b9;color:white;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,0)">☁️ رفع</button>
-      <button onclick="dbStats()" style="padding:6px;background:rgba(255,255,255,0.06);color:rgba(232,196,154,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;cursor:pointer">📊 التخزين</button>
+      <button onclick="dbBackup()" style="padding:6px;background:#2a7d4f;color:white;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">💾 حفظ</button>
     </div>
-    <button onclick="dbRestoreSnap()" style="width:100%;padding:4px;margin-top:4px;background:rgba(255,255,255,0.04);color:rgba(232,196,154,0.5);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.62rem;cursor:pointer">🔄 نسخ تلقائية</button>
-    <button onclick="dbPullRemote()" style="width:100%;padding:4px;margin-top:4px;background:rgba(255,255,255,0.04);color:rgba(232,196,154,0.5);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.62rem;cursor:pointer">⬇️ سحب من السيرفر</button>
-    <div id="backup-status" style="font-size:0.6rem;color:rgba(232,196,154,0.5);text-align:center;min-height:12px;margin-top:2px"></div>
+    <button class="sb-more-btn" onclick="sbToggleMore()" id="sb-more-btn">⚙️ أدوات أكتر ▾</button>
+    <div class="sb-more" id="sb-more">
+      <div style="margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <div style="position:relative">
+          <input type="file" id="db-ri" accept=".json,application/json" style="position:absolute;width:0;height:0;opacity:0;overflow:hidden" onchange="dbRestoreFile(this)">
+          <label for="db-ri" style="display:block;padding:6px;background:rgba(255,255,255,0.1);color:#e8c49a;border:1px solid rgba(255,255,255,0.2);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.66rem;font-weight:700;cursor:pointer;text-align:center;box-sizing:border-box;touch-action:manipulation">📂 استعادة</label>
+        </div>
+        <button onclick="dbStats()" style="padding:6px;background:rgba(255,255,255,0.06);color:rgba(232,196,154,0.7);border:1px solid rgba(255,255,255,0.1);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.66rem;cursor:pointer">📊 التخزين</button>
+      </div>
+      <button onclick="dbRestoreSnap()" style="width:100%;padding:5px;margin-top:4px;background:rgba(255,255,255,0.04);color:rgba(232,196,154,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.63rem;cursor:pointer">🔄 نسخ تلقائية</button>
+      <button onclick="dbPullRemote()" style="width:100%;padding:5px;margin-top:4px;background:rgba(255,255,255,0.04);color:rgba(232,196,154,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:6px;font-family:Cairo,sans-serif;font-size:0.63rem;cursor:pointer">⬇️ سحب من السيرفر</button>
+      <div style="display:flex;gap:4px;justify-content:center;margin-top:5px">
+        <button onclick="fsChange(-1)" title="تصغير الخط" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.78rem;font-weight:900;cursor:pointer">A−</button>
+        <button onclick="fsChange(0)" title="الحجم الافتراضي" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.68rem;cursor:pointer">↺</button>
+        <button onclick="fsChange(1)" title="تكبير الخط" style="flex:1;background:rgba(255,255,255,0.08);color:var(--pale);border:none;border-radius:6px;padding:4px;font-family:Cairo,sans-serif;font-size:0.92rem;font-weight:900;cursor:pointer">A+</button>
+      </div>
+      <div id="backup-status" style="font-size:0.6rem;color:rgba(232,196,154,0.5);text-align:center;min-height:12px;margin-top:3px"></div>
+    </div>
   </div>
 </aside>
 <button id="undo-btn" onclick="dbUndo()" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:9999;background:#e67e22;color:white;border:none;border-radius:12px;padding:10px 24px;font-family:Cairo,sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;touch-action:manipulation;box-shadow:0 4px 16px rgba(0,0,0,0.3)">↩️ تراجع</button>
@@ -448,49 +456,59 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <div id="p-inv" class="pg">
   <div class="staff-only" style="display:none;background:#eef6ff;border:1px solid #cfe4fb;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.78rem;color:#2c5d8a">📋 تقدر تعمل الجرد وتكتب التكعيب على كل رابطة — أسماء المصانع والموردين مخفية.</div>
   <div class="ph"><div><h2>📦 المخزون</h2></div>
-    <div style="display:flex;gap:6px">
-    <button class="btn bo" onclick="printBox('p-inv','المخزون')">🖨️ طباعة</button>
-    <button class="btn adm" id="audit-open-btn" style="background:#8e44ad;color:white" onclick="stockAuditToggle()">📋 جرد الرابطات المجهولة</button>
-    <input style="padding:7px 11px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.8rem" placeholder="🔍 بحث..." oninput="filt('inv-t',this.value)"></div></div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <input style="padding:7px 11px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.8rem;min-width:130px" placeholder="🔍 بحث سريع..." oninput="filt('inv-t',this.value)">
+    <button class="btn bo" style="font-size:0.78rem;padding:7px 12px" onclick="exportPageXL('p-inv','المخزون')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.78rem;padding:7px 12px" onclick="printBox('p-inv','المخزون')">🖨️ طباعة</button>
+    <button class="btn adm" id="audit-open-btn" style="background:#8e44ad;color:white;font-size:0.78rem;padding:7px 12px" onclick="stockAuditToggle()">📋 جرد المجهولة</button>
+    </div></div>
   <div id="stock-audit-box" class="card adm" style="display:none;margin-bottom:14px;border:2px solid #8e44ad"></div>
-  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">رقم الرابطة</label>
-      <input id="inv-f-num" placeholder="#رقم" oninput="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;width:80px">
+  <div class="card" style="padding:12px 14px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+      <span style="font-size:0.85rem;font-weight:900;color:var(--dk)">🔎 فلاتر المخزون</span>
+      <button onclick="G('inv-f-num').value='';G('inv-f-spec').value='';G('inv-f-thick').value='';G('inv-f-len').value='';G('inv-f-pcs').value='';G('inv-f-pl').value='';G('inv-f-factory').value='';G('inv-f-truck').value='';if(G('inv-f-truck-q'))G('inv-f-truck-q').value='';invRender()" class="btn bo" style="font-size:0.75rem;padding:6px 12px">↺ مسح الفلتر</button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">الدرجة</label>
-      <select id="inv-f-spec" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل الدرجات</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">سماكة اللوح</label>
-      <select id="inv-f-thick" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل السماكات</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">طول اللوح</label>
-      <select id="inv-f-len" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل الأطوال</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">عدد الألواح</label>
-      <select id="inv-f-pcs" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل الأعداد</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:transparent">x</label>
-      <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:#888;font-weight:700">Packing List</label>
-      <select id="inv-f-pl" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل الشحنات</option></select>
-      <select id="inv-f-factory" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">كل المصانع</option></select>
-      <select id="inv-f-truck" onchange="invRender()" style="padding:7px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem"><option value="">🚚 كل العربيات</option></select>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:2px">
-      <label style="font-size:0.65rem;color:transparent">x</label>
-      <button onclick="G('inv-f-num').value='';G('inv-f-spec').value='';G('inv-f-thick').value='';G('inv-f-len').value='';G('inv-f-pcs').value='';G('inv-f-pl').value='';G('inv-f-factory').value='';G('inv-f-truck').value='';invRender()" class="btn bo" style="font-size:0.78rem;padding:7px 12px">مسح الفلتر</button>
-    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px">
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">رقم الرابطة</label>
+        <input id="inv-f-num" placeholder="#رقم" oninput="invRenderLazy()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white">
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">الدرجة</label>
+        <select id="inv-f-spec" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل الدرجات</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">سماكة اللوح</label>
+        <select id="inv-f-thick" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل السماكات</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">طول اللوح</label>
+        <select id="inv-f-len" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل الأطوال</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">عدد الألواح</label>
+        <select id="inv-f-pcs" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل الأعداد</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">الشحنة (Packing List)</label>
+        <select id="inv-f-pl" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل الشحنات</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0" class="adm">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">المصنع</label>
+        <select id="inv-f-factory" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل المصانع</option></select>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">🚚 رقم العربية</label>
+        <div style="display:flex;gap:4px">
+          <input id="inv-f-truck-q" oninput="invRenderLazy()" placeholder="🔍 دوّر" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;width:62px;flex:0 0 62px">
+          <select id="inv-f-truck" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;flex:1;min-width:0"><option value="">كل العربيات</option></select>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div style="margin-bottom:10px">
-    <button onclick="findDupBundles()" class="btn bo" style="font-size:0.8rem;padding:8px 14px">🔍 كشف الربط المكررة</button>
+  <div style="margin-bottom:10px;text-align:left">
+    <button onclick="findDupBundles()" class="btn bo" style="font-size:0.76rem;padding:6px 12px">🔍 كشف الربط المكررة</button>
     <div id="dup-result" style="margin-top:10px"></div>
   </div>
 
@@ -690,6 +708,8 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <div id="p-cust" class="pg">
   <div class="ph"><div><h2>👥 العملاء</h2></div>
     <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-cust','العملاء')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-cust','العملاء')">🖨️ طباعة</button>
     <button class="btn bo" id="cu-reveal-btn" onclick="cuToggleReveal()">👁️ إظهار الكل</button>
     <button class="btn bp" onclick="cuShowAdd()">➕ عميل جديد</button></div></div>
   <div class="card" id="cu-add-card" style="display:none">
@@ -924,7 +944,11 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 </div>
 
 <div id="p-sum" class="pg">
-  <div class="ph"><div><h2>📊 الملخصات</h2></div></div>
+  <div class="ph"><div><h2>📊 الملخصات</h2></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-sum','الملخصات')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-sum','الملخصات')">🖨️ طباعة</button>
+    </div></div>
   <div>
 
     <!-- فلتر الفترة -->
@@ -1019,7 +1043,10 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <!-- REPORTS -->
 <div id="p-reports" class="pg">
   <div class="ph"><div><h2>📈 تقارير</h2><p>تحليلات المبيعات والعملاء</p></div>
-    <button class="btn bo" onclick="printBox('p-reports','التقارير الكاملة')">🖨️ طباعة كل التقارير</button></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-reports','التقارير')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-reports','التقارير الكاملة')">🖨️ طباعة</button>
+    </div></div>
   <div>
     <div class="card" style="margin-bottom:14px">
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -1077,12 +1104,47 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
       <div id="rep-yearly"></div>
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="ch"><span class="ct">📊 جودة مقاسات المصانع (الرابطات المعاد تكعيبها)</span>
-        <div style="display:flex;gap:5px">
-          <button class="btn bo bs" onclick="exportBoxXL('rep-recut','جودة-المصانع','المصانع')">📊 إكسل</button>
+      <div class="ch"><span class="ct">📊 جودة مقاسات المصانع</span>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn bs adm" id="rc-del-sel" style="display:none;background:#c0392b;color:white" onclick="rcDelSelected()">🗑️ مسح المحدد</button>
+          <button class="btn bo bs" onclick="recutExportXL()">📊 إكسل</button>
+          <button class="btn bs" style="background:#2c5d8a;color:white" onclick="recutEnglishReport()">🇬🇧 English</button>
           <button class="btn bo bs" onclick="printBox('rep-recut','جودة مقاسات المصانع')">🖨️ طباعة</button>
           <button class="btn bo bs adm" onclick="recutClear()">🗑️ تصفية</button>
         </div></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px;padding:10px;background:#faf7f2;border-radius:10px">
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">المصنع</label>
+          <select id="rc-f-fac" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white"><option value="">كل المصانع</option></select>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">🚚 رقم العربية</label>
+          <select id="rc-f-truck" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white"><option value="">🚚 كل العربيات</option></select>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">📋 الشحنة</label>
+          <select id="rc-f-sh" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white"><option value="">كل الشحنات</option></select>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">المصدر</label>
+          <select id="rc-f-src" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white">
+            <option value="">الكل</option>
+            <option value="edit">✏️ تعديل يدوي</option>
+            <option value="audit">🏷️ جرد</option>
+          </select>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">من تاريخ</label>
+          <input type="date" id="rc-f-from" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white">
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">إلى تاريخ</label>
+          <input type="date" id="rc-f-to" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white">
+        </div>
+        <div style="display:flex;flex-direction:column;justify-content:flex-end">
+          <button class="btn bo" style="font-size:0.75rem;padding:6px" onclick="G('rc-f-fac').value='';if(G('rc-f-truck'))G('rc-f-truck').value='';if(G('rc-f-sh'))G('rc-f-sh').value='';G('rc-f-src').value='';G('rc-f-from').value='';G('rc-f-to').value='';recutReport()">↺ مسح</button>
+        </div>
+      </div>
       <div id="rep-recut-al"></div>
       <div id="rep-recut"></div>
     </div>
@@ -1091,7 +1153,11 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 
 <!-- CASHBOOK -->
 <div id="p-cash" class="pg">
-  <div class="ph"><div><h2>💵 اليومية</h2><p>سجل الحركات النقدية</p></div></div>
+  <div class="ph"><div><h2>💵 اليومية</h2><p>سجل الحركات النقدية</p></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-cash','اليومية')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-cash','اليومية')">🖨️ طباعة</button>
+    </div></div>
 
   <!-- أرصدة الحسابات -->
   <div id="cb-filter-label" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:8px 14px;margin-bottom:10px;font-size:0.8rem;font-weight:700;color:#856404;text-align:center">⚠️ الأرصدة محسوبة للفترة المفلترة فقط</div>
@@ -1786,7 +1852,7 @@ function _attemptWrite(attempt){
           db=dbMerge(JSON.parse(JSON.stringify(db)),remote);
           _ensureArrays();
           db.inv.forEach(function(it){it._orig=1;it.avail=it.avail>0?1:0;});
-          _invDirty=true;recalcInv();_ensurePayIds();_recalcCustTotals();
+          _invDirty=true;_invalidateInvMap();recalcInv();_ensurePayIds();_recalcCustTotals();
         }catch(e){console.warn('merge before save failed',e);}
       }
     }
@@ -2067,11 +2133,16 @@ function recalcInv(){
   // عدّاد كام فاتورة (غير مرتجعة) بايعة كل رابطة — عشان نكشف لو نفس الرابطة اتباعت مرتين
   var activeCount={};
   (db.sales||[]).forEach(function(sale){
+    // ⚡ خريطة المرتجعات مرة واحدة لكل فاتورة (بدل filter لكل سطر — أسرع بكتير)
+    var _retMap=null;
+    if(sale.retLines&&sale.retLines.length){
+      _retMap={};
+      sale.retLines.forEach(function(r){_retMap[r.invId]=(_retMap[r.invId]||0)+(r.qty||0);});
+    }
     (sale.lines||[]).forEach(function(ln){
       var it=invMap[ln.invId];
       if(!it)return;
-      // هل اترجع البند ده من الفاتورة دي بالذات؟ (نربط المرتجع بفاتورته بدل ما يفتح الرابطة على طول)
-      var retQty=(sale.retLines||[]).filter(function(r){return r.invId===ln.invId;}).reduce(function(s,r){return s+(r.qty||0);},0);
+      var retQty=_retMap?(_retMap[ln.invId]||0):0;
       var soldQty=ln.qty||1;
       if(retQty<soldQty){it.avail=0;activeCount[ln.invId]=(activeCount[ln.invId]||0)+1;}
     });
@@ -2158,6 +2229,7 @@ function dbArchive(){
     var usedInvIds={};
     (db.sales||[]).forEach(function(s){(s.lines||[]).forEach(function(l){usedInvIds[l.invId]=1;});});
     db.inv=(db.inv||[]).filter(function(i){return i.avail>0||usedInvIds[i.id];});
+  try{_invalidateInvMap();}catch(e){}
     recalcInv();
     // الأرشفة = كتابة مباشرة على السيرفر (بدون دمج) عشان البيانات القديمة تتشال فعلاً ومترجعش
     try{persistDB(JSON.stringify(db));}catch(e){}
@@ -2818,32 +2890,83 @@ function stockAuditForce(idx){
   dashRender();invRender();stockAuditOpen();
   showAl('inv-al','✅ اتسوّت الرابطة يدوياً',true);
 }
+var _invRenderTimer=null;
+function invRenderLazy(){
+  // ⚡ تأخير ذكي: تستنى 250ms بعد آخر حرف بدل إعادة رسم مع كل ضغطة
+  if(_invRenderTimer)clearTimeout(_invRenderTimer);
+  _invRenderTimer=setTimeout(function(){_invRenderTimer=null;invRender();},250);
+}
 function invRender(){
-  recalcInv();
+  // recalcInv تقيلة (بتلف على كل البيعات) — منناديهاش إلا لو فيه تغيير فعلي
+  if(typeof _invDirty==='undefined'||_invDirty)recalcInv();
   var av=db.inv.filter(function(i){return i.avail>0;});
-  // تعبئة الفلاتر
-  var specs=[...new Set(av.map(function(i){return i.spec;}))].sort();
-  var thicks=[...new Set(av.map(function(i){return i.thick||38;}))].sort(function(a,b){return a-b;});
-  var lens=[...new Set(av.map(function(i){return i.len;}))].sort();
-  var pcsList=[...new Set(av.map(function(i){return i.pcs||0;}))].sort(function(a,b){return a-b;});
-  var plList=[...new Set(av.map(function(i){return i.shRef||''}))].filter(Boolean).sort();
+  // القيم المختارة حالياً
+  var _fs=(G('inv-f-spec')||{value:''}).value;
+  var _ft=(G('inv-f-thick')||{value:''}).value;
+  var _fl=(G('inv-f-len')||{value:''}).value;
+  var _fp=(G('inv-f-pcs')||{value:''}).value;
+  var _fpl=(G('inv-f-pl')||{value:''}).value;
+  var _ffc=(G('inv-f-factory')||{value:''}).value;
+  var _ftr=(G('inv-f-truck')||{value:''}).value;
+  // 🔗 فلاتر مترابطة: كل قايمة بتتبني من المتاح بعد باقي الفلاتر (من غير فلتر نفسها)
+  var _poolCache={};
+  function _pool(skip){
+    if(_poolCache[skip])return _poolCache[skip];
+    return _poolCache[skip]=av.filter(function(i){
+      if(skip!=='spec'&&_fs&&i.spec!==_fs)return false;
+      if(skip!=='thick'&&_ft&&String(i.thick||38)!==_ft)return false;
+      if(skip!=='len'&&_fl&&i.len!==_fl)return false;
+      if(skip!=='pcs'&&_fp&&String(i.pcs||0)!==_fp)return false;
+      if(skip!=='pl'&&_fpl&&i.shRef!==_fpl)return false;
+      if(skip!=='fac'&&_ffc&&(i.factory||'')!==_ffc)return false;
+      if(skip!=='truck'&&_ftr&&String(i.truck||'')!==_ftr)return false;
+      return true;
+    });
+  }
+  var specs=[...new Set(_pool('spec').map(function(i){return i.spec;}))].sort();
+  var thicks=[...new Set(_pool('thick').map(function(i){return i.thick||38;}))].sort(function(a,b){return a-b;});
+  var lens=[...new Set(_pool('len').map(function(i){return i.len;}))].sort();
+  var pcsList=[...new Set(_pool('pcs').map(function(i){return i.pcs||0;}))].sort(function(a,b){return a-b;});
+  var plList=[...new Set(_pool('pl').map(function(i){return i.shRef||''}))].filter(Boolean).sort();
+  var factories=[...new Set(_pool('fac').map(function(i){return i.factory||'';}).filter(Boolean))].sort();
+  var trucks=[...new Set(_pool('truck').map(function(i){return String(i.truck||'');}).filter(Boolean))].sort(function(a,b){return String(a).localeCompare(String(b),'ar',{numeric:true});});
+  // عدّاد سريع: خريطة مرة واحدة لكل قايمة (بدل بحث متكرر لكل خيار)
+  function _mkCnt(list,key){
+    var m={};
+    (list||[]).forEach(function(i){
+      var v = key==='spec'?i.spec
+            : key==='thick'?String(i.thick||38)
+            : key==='len'?i.len
+            : key==='pcs'?String(i.pcs||0)
+            : key==='pl'?i.shRef
+            : key==='fac'?(i.factory||'')
+            : String(i.truck||'');
+      if(v!==undefined&&v!==null)m[v]=(m[v]||0)+1;
+    });
+    return m;
+  }
   var plf=G('inv-f-pl');
-  if(plf){var plv=plf.value;plf.innerHTML='<option value="">كل الشحنات</option>';plList.forEach(function(p){plf.innerHTML+='<option value="'+escAttr(p)+'"'+(p===plv?' selected':'')+'>'+esc(p)+'</option>';});}
-  var factories=[...new Set(av.map(function(i){return i.factory||'';}).filter(Boolean))].sort();
-  var trucks=[...new Set(av.map(function(i){return String(i.truck||'');}).filter(Boolean))].sort(function(a,b){return String(a).localeCompare(String(b),'ar',{numeric:true});});
+  if(plf){var plv=plf.value,_plM=_mkCnt(_pool('pl'),'pl');plf.innerHTML='<option value="">كل الشحنات</option>';plList.forEach(function(p){plf.innerHTML+='<option value="'+escAttr(p)+'"'+(p===plv?' selected':'')+'>'+esc(p)+' ('+(_plM[p]||0)+')</option>';});}
   var tf2=G('inv-f-truck');
-  if(tf2){var tv2=tf2.value;tf2.innerHTML='<option value="">🚚 كل العربيات</option>';trucks.forEach(function(t){tf2.innerHTML+='<option value="'+escAttr(t)+'"'+(t===tv2?' selected':'')+'>🚚 '+esc(t)+'</option>';});}
+  if(tf2){
+    var tv2=tf2.value,_trM=_mkCnt(_pool('truck'),'truck');
+    var _tq=((G('inv-f-truck-q')||{value:''}).value||'').trim().toLowerCase();
+    var _trShown=_tq?trucks.filter(function(t){return String(t).toLowerCase().indexOf(_tq)>=0;}):trucks;
+    tf2.innerHTML='<option value="">🚚 كل العربيات ('+trucks.length+')</option>';
+    _trShown.forEach(function(t){tf2.innerHTML+='<option value="'+escAttr(t)+'"'+(t===tv2?' selected':'')+'>🚚 '+esc(t)+' ('+(_trM[t]||0)+')</option>';});
+    if(_tq&&tv2&&_trShown.indexOf(tv2)<0)tf2.innerHTML+='<option value="'+escAttr(tv2)+'" selected>🚚 '+esc(tv2)+'</option>';
+  }
   var ff=G('inv-f-factory');
   if(ff){
     var _ffWrap=ff.closest('div,span,label')||ff;
     if(!isAdmin()){ff.value='';ff.style.display='none';if(_ffWrap&&_ffWrap!==ff)_ffWrap.style.display='none';}
-    else{ff.style.display='';var fv=ff.value;ff.innerHTML='<option value="">كل المصانع</option>';factories.forEach(function(f){ff.innerHTML+='<option value="'+escAttr(f)+'"'+(f===fv?' selected':'')+'>'+esc(f)+'</option>';});}
+    else{ff.style.display='';var fv=ff.value,_facM=_mkCnt(_pool('fac'),'fac');ff.innerHTML='<option value="">كل المصانع</option>';factories.forEach(function(f){ff.innerHTML+='<option value="'+escAttr(f)+'"'+(f===fv?' selected':'')+'>'+esc(f)+' ('+(_facM[f]||0)+')</option>';});}
   }
   var sf=G('inv-f-spec'),tf=G('inv-f-thick'),lf=G('inv-f-len'),pf=G('inv-f-pcs');
-  if(sf){var sv=sf.value;sf.innerHTML='<option value="">كل الدرجات</option>';specs.forEach(function(s){sf.innerHTML+='<option value="'+escAttr(s)+'"'+(s===sv?' selected':'')+'>'+esc(s.toUpperCase())+'</option>';});}
-  if(tf){var tv=tf.value;tf.innerHTML='<option value="">كل السماكات</option>';thicks.forEach(function(t){tf.innerHTML+='<option value="'+t+'"'+(String(t)===tv?' selected':'')+'>'+t+' mm</option>';});}
-  if(lf){var lv=lf.value;lf.innerHTML='<option value="">كل الأطوال</option>';lens.forEach(function(l){lf.innerHTML+='<option value="'+escAttr(l)+'"'+(l===lv?' selected':'')+'>'+esc(l)+'</option>';});}
-  if(pf){var pv=pf.value;pf.innerHTML='<option value="">كل الأعداد</option>';pcsList.forEach(function(p){pf.innerHTML+='<option value="'+p+'"'+(String(p)===pv?' selected':'')+'>'+p+' لوح</option>';});}
+  if(sf){var sv=sf.value,_spM=_mkCnt(_pool('spec'),'spec');sf.innerHTML='<option value="">كل الدرجات</option>';specs.forEach(function(s){sf.innerHTML+='<option value="'+escAttr(s)+'"'+(s===sv?' selected':'')+'>'+esc(s.toUpperCase())+' ('+(_spM[s]||0)+')</option>';});}
+  if(tf){var tv=tf.value,_thM=_mkCnt(_pool('thick'),'thick');tf.innerHTML='<option value="">كل السماكات</option>';thicks.forEach(function(t){tf.innerHTML+='<option value="'+t+'"'+(String(t)===tv?' selected':'')+'>'+t+' mm ('+(_thM[String(t)]||0)+')</option>';});}
+  if(lf){var lv=lf.value,_lnM=_mkCnt(_pool('len'),'len');lf.innerHTML='<option value="">كل الأطوال</option>';lens.forEach(function(l){lf.innerHTML+='<option value="'+escAttr(l)+'"'+(l===lv?' selected':'')+'>'+esc(l)+' ('+(_lnM[l]||0)+')</option>';});}
+  if(pf){var pv=pf.value,_pcM=_mkCnt(_pool('pcs'),'pcs');pf.innerHTML='<option value="">كل الأعداد</option>';pcsList.forEach(function(p){pf.innerHTML+='<option value="'+p+'"'+(String(p)===pv?' selected':'')+'>'+p+' لوح ('+(_pcM[String(p)]||0)+')</option>';});}
     // تطبيق الفلاتر
   var fnum=(G('inv-f-num')||{value:''}).value.trim().toLowerCase();
   var fspec=(G('inv-f-spec')||{value:''}).value;
@@ -3312,7 +3435,7 @@ function slSearch(q){
       return diffs===1;
     });
     if(similar.length){
-      similarHTML='<div style="background:#fff8ec;border:1px solid #f0dcb8;border-radius:8px;padding:8px;margin-bottom:8px">'
+      similarHTML='<div style="background:#fff8ec;border:1px solid #f0dcb8;border-radius:8px;padding:8px;margin-top:10px">'
         +'<div style="font-size:0.76rem;font-weight:700;color:#b8792a;margin-bottom:5px">🔀 أرقام شبيهة (أرقام مقلوبة أو خانة واحدة مختلفة):</div>'
         +similar.map(function(inv){return '<div style="display:flex;justify-content:space-between;align-items:center;background:white;border-radius:6px;padding:6px;margin-bottom:3px">'
           +'<span style="font-size:0.78rem"><b>#'+esc(String(inv.num))+'</b> | '+esc(inv.spec)+' | '+(inv.thick||38)+'mm | '+esc(inv.len)+' | '+fmt(inv.pcs||0)+' لوح | '+inv.net.toFixed(3)+' م³</span>'
@@ -3320,8 +3443,8 @@ function slSearch(q){
         +'</div>';
     }
   }
-  if(!av.length){res.innerHTML=similarHTML+(similarHTML?'':'<p style="color:#aaa;font-size:0.8rem;padding:5px">لا نتائج</p>');return;}
-  res.innerHTML=similarHTML+'<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr style="background:var(--pale)">'+
+  if(!av.length){res.innerHTML=(similarHTML?'<p style="color:#aaa;font-size:0.78rem;padding:5px;margin:0">مفيش رابطة بالرقم ده بالظبط — بس في أرقام شبيهة تحت 👇</p>'+similarHTML:'<p style="color:#aaa;font-size:0.8rem;padding:5px">لا نتائج</p>');return;}
+  res.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr style="background:var(--pale)">'+
     '<th style="padding:6px">number</th><th style="padding:6px">spec</th><th style="padding:6px">mm</th><th style="padding:6px">length</th><th style="padding:6px">ألواح</th><th style="padding:6px">م³</th><th></th></tr></thead><tbody>'+
     av.map(function(inv){return '<tr style="border-bottom:1px solid #f0ebe2">'+
       '<td style="padding:6px;text-align:center"><strong>'+inv.num+'</strong></td>'+
@@ -3330,7 +3453,7 @@ function slSearch(q){
       '<td style="padding:6px;text-align:center">'+inv.len+'</td>'+
       '<td style="padding:6px;text-align:center"><strong style="color:var(--gr)">'+fmt(inv.pcs||0)+'</strong></td>'+
       '<td style="padding:6px;text-align:center">'+inv.net.toFixed(3)+'</td>'+
-      '<td style="padding:6px;text-align:center;white-space:nowrap"><button class="btn bo bs" style="margin-inline-end:3px;padding:4px 9px" onclick="slFixAll(\''+inv.id+'\')" title="عدّل النوع والعدد والتكعيب مرة واحدة">✏️ تعديل</button><button class="btn bg_ bs" onclick="slAddFromSearch(\''+inv.id+'\')">+ إضافة</button></td></tr>';}).join('')+'</tbody></table>';
+      '<td style="padding:6px;text-align:center;white-space:nowrap"><button class="btn bo bs" style="margin-inline-end:3px;padding:4px 9px" onclick="slFixAll(\''+inv.id+'\')" title="عدّل النوع والعدد والتكعيب مرة واحدة">✏️ تعديل</button><button class="btn bg_ bs" onclick="slAddFromSearch(\''+inv.id+'\')">+ إضافة</button></td></tr>';}).join('')+'</tbody></table>'+similarHTML;
 }
 function slFixSpec(invId){
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 تعديل النوع للمدير فقط');
@@ -3356,6 +3479,9 @@ function _logRecut(inv,oldNet,newNet,src,saleId){
     num:String(inv.num||'🏷️'),
     spec:inv.spec||'',
     factory:inv.factory||'',
+    truck:String(inv.truck||''),
+    shRef:inv.shRef||'',
+    shDt:(function(){var sh=(db.ships||[]).find(function(x){return x.id===inv.shId;});return sh?(sh.dt||''):'';})(),
     thick:inv.thick||38,
     len:inv.len||'',
     pcs:inv.pcs||0,
@@ -3546,7 +3672,7 @@ function slRender(){
   var con=G('sl-lines');
   if(!_sl.length){con.innerHTML='<p style="color:#aaa;font-size:0.8rem;text-align:center;padding:10px">ابحث أو اضغط إضافة يدوي</p>';slTotals();return;}
   con.innerHTML=_sl.map(function(l,i){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var inv=_invMap()[l.invId];
     var m3=l.noNum?(l.net||0):(inv?inv.net:0),lt=Math.round(m3*(l.price||0));l.qty=1;
     return '<div class="slbox">'+
       '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'+
@@ -3577,7 +3703,7 @@ function slTotals(){
   var tp=_sl.filter(function(l){return l.invId||l.noNum;}).length,tm3=0,grand=0;
   _sl.forEach(function(l){
     if(l.noNum){tm3+=(l.net||0);grand+=(l.net||0)*(l.price||0);}
-    else{var inv=db.inv.find(function(x){return x.id===l.invId;});if(inv){tm3+=inv.net;grand+=inv.net*(l.price||0);}}
+    else{var inv=_invMap()[l.invId];if(inv){tm3+=inv.net;grand+=inv.net*(l.price||0);}}
   });
   // خصم
   var discVal=parseFloat((G('sl-discount')||{}).value)||0;
@@ -3626,7 +3752,7 @@ async function slSave(){
       saleLines.push({invId:'',noNum:1,spec:l.spec,factory:l.factory||'',thick:l.thick||38,len:l.len,pcs:l.pcs||0,net:l.net||0,shRef:l.shRef||'',qty:1,price:l.price||0,pendingInv:1});
       return;
     }
-    var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
+    var inv=_invMap()[l.invId];if(!inv)return;
     tp+=(inv.pcs||0);tm3+=inv.net;grand+=inv.net*(l.price||0);
     saleLines.push({invId:l.invId,qty:l.qty,price:l.price||0});
   });
@@ -3703,7 +3829,7 @@ function slPrint(saleId){
   var rows='',totalM3=0,totalPcs=0,totalVal=0;
   var printGroups={};
   (s.lines||[]).forEach(function(l){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var inv=_invMap()[l.invId];
     // السطر بالمواصفات (رقمها ضاع) — نستخدم بياناته المخزّنة
     var d=l.noNum?{spec:l.spec,thick:l.thick||38,len:l.len,pcs:l.pcs||0,net:l.net||0,num:'🏷️'}
              :(inv?{spec:inv.spec,thick:inv.thick||38,len:inv.len,pcs:inv.pcs||0,net:inv.net,num:inv.num}:null);
@@ -4082,7 +4208,7 @@ function saleEditOpen(saleId){
   // بناء سطور الأسعار
   var html='';
   (s.lines||[]).forEach(function(l,i){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var inv=_invMap()[l.invId];
     var _d=l.noNum?{num:'🏷️',spec:l.spec,thick:l.thick||38,pcs:l.pcs||0,net:l.net||0}:(inv?{num:'#'+inv.num,spec:inv.spec,thick:inv.thick||38,pcs:inv.pcs||0,net:inv.net}:null);
     if(!_d)return;
     html+='<div id="se-row-'+i+'" style="display:flex;align-items:center;gap:8px;padding:7px;background:#f9f5f0;border-radius:8px;margin-bottom:6px">'+
@@ -4115,7 +4241,7 @@ function seCalcTotal(){
   var s=db.sales.find(function(x){return x.id===_seId;});if(!s)return;
   var total=0;
   (s.lines||[]).forEach(function(l,i){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var inv=_invMap()[l.invId];
     var _net=l.noNum?(l.net||0):(inv?inv.net:null);
     if(_net===null)return;
     var p=parseFloat((G('se-p-'+i)||{value:0}).value)||0;
@@ -4179,7 +4305,7 @@ function saleEditSave(){
   // تحديث الأسعار
   var total=0;
   (s.lines||[]).forEach(function(l,i){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var inv=_invMap()[l.invId];
     var _net=l.noNum?(l.net||0):(inv?inv.net:null);
     if(_net===null)return;
     var p=parseFloat((G('se-p-'+i)||{value:l.price}).value)||0;
@@ -4198,7 +4324,7 @@ function saleEditSave(){
   // تحديث tp و tm3
   var newTp=0,newTm3=0;
   (s.lines||[]).forEach(function(l){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var inv=_invMap()[l.invId];
     var _net=l.noNum?(l.net||0):(inv?inv.net:null);
     var _pcs=l.noNum?(l.pcs||0):(inv?(inv.pcs||0):0);
     if(_net===null)return;
@@ -4298,7 +4424,7 @@ function saleWaSend(saleId,mode){
     ln.push('');
     ln.push('*تفاصيل الرابطات:*');
     (s.lines||[]).forEach(function(l,i){
-      var inv=db.inv.find(function(x){return x.id===l.invId;});
+      var inv=_invMap()[l.invId];
       var d=l.noNum?{spec:l.spec,thick:l.thick||38,len:l.len,net:l.net||0,num:'🏷️'}
                :(inv?{spec:inv.spec,thick:inv.thick||38,len:inv.len,net:inv.net,num:'#'+inv.num}:null);
       if(!d)return;
@@ -4379,7 +4505,7 @@ function retOpen(saleId){
   G('ret-dt').value=todayLocal();G('ret-note').value='';
   var html='';
   (s.lines||[]).forEach(function(l){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});if(!inv)return;
+    var inv=_invMap()[l.invId];if(!inv)return;
     var done=(s.retLines||[]).reduce(function(sum,r){return r.invId===l.invId?sum+(r.qty||0):sum;},0)>=l.qty;
     html+='<div style="display:flex;align-items:center;gap:10px;padding:10px;border:1px solid #f0ebe2;border-radius:9px;margin-bottom:7px">'+
       '<input type="checkbox" id="rc_'+l.invId+'" '+(done?'disabled':'')+' onchange="_retChecks[\''+l.invId+'\']=this.checked;G(\'rq_'+l.invId+'\').disabled=!this.checked" style="width:16px;height:16px">'+
@@ -4563,8 +4689,8 @@ function cuRender(){
           '<td style="padding:9px 12px;font-weight:700;font-size:0.88rem;color:var(--dk);cursor:pointer">'+esc(c.nm)+'</td>'+
           '<td style="padding:9px 12px;font-size:0.8rem;text-align:center;color:#555">'+(c.ph||'\u2014')+'</td>'+
           '<td style="padding:9px 12px;font-size:0.82rem;text-align:center;font-weight:700" onclick="event.stopPropagation();this.classList.toggle(\'shown\')" class="cu-blur-cell">'+fmt(Math.round(tot))+' \u062c</td>'+
-          '<td style="padding:9px 12px;font-size:0.85rem;text-align:center;font-weight:900;color:'+(debt>0?'#c0392b':'#1e6b3c')+'" onclick="event.stopPropagation();this.classList.toggle(\'shown\')" class="cu-blur-cell">'+fmt(Math.round(debt))+' \u062c</td>'+
-          '<td style="padding:9px 12px;text-align:center"><span style="background:'+(debt>0?'#fdecea':'#e8f7ef')+';color:'+(debt>0?'#c0392b':'#1e6b3c')+';font-size:0.72rem;padding:2px 8px;border-radius:10px;font-weight:700">'+(debt>0?'\u0639\u0644\u064a\u0647 \u062f\u064a\u0646':'\u0645\u0633\u062f\u062f')+'</span></td>'+
+          '<td style="padding:9px 12px;font-size:0.85rem;text-align:center;font-weight:900;color:'+(debt>0?'#c0392b':debt<0?'#2c5d8a':'#1e6b3c')+'" onclick="event.stopPropagation();this.classList.toggle(\'shown\')" class="cu-blur-cell">'+fmt(Math.round(debt))+' \u062c</td>'+
+          '<td style="padding:9px 12px;text-align:center"><span style="background:'+(debt>0?'#fdecea':debt<0?'#eef4fb':'#e8f7ef')+';color:'+(debt>0?'#c0392b':debt<0?'#2c5d8a':'#1e6b3c')+';font-size:0.72rem;padding:2px 8px;border-radius:10px;font-weight:700">'+(debt>0?'\u0639\u0644\u064a\u0647 \u062f\u064a\u0646':debt<0?'\u0644\u0647 \u0631\u0635\u064a\u062f':'\u0645\u0633\u062f\u062f')+'</span></td>'+
           '<td style="padding:9px 12px;text-align:center" onclick="event.stopPropagation()">'+
             '<button class="btn bp bs" style="font-size:0.7rem;padding:4px 9px" onclick="cuOpen(\''+c.id+'\')">📋 \u0643\u0634\u0641</button> '+
             (c.ph?'<button class="btn bs" style="font-size:0.7rem;padding:4px 9px;background:#25D366;color:white" onclick="remWa(\''+c.id+'\')">💬</button>':'')+'</td>'+
@@ -4588,7 +4714,7 @@ function cuRender(){
       return '<div style="background:white;border-radius:14px;padding:18px;box-shadow:0 2px 8px var(--sh);cursor:pointer;border-top:4px solid '+(debt>0?'var(--rd)':'var(--gr)')+';transition:transform 0.15s" onclick="cuOpen(\''+c.id+'\')" onmouseover="this.style.transform=\'translateY(-2px)\'" onmouseout="this.style.transform=\'\'">'+
         '<div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:12px">'+
           '<div><div style="font-size:1rem;font-weight:900;color:var(--dk)">'+esc(c.nm)+'</div><div style="font-size:0.72rem;color:#888">'+(c.ph||'\u2014')+'</div></div>'+
-          '<span class="bx '+(debt>0?'bxo':'bxg')+'">'+(debt>0?'\u0639\u0644\u064a\u0647 \u062f\u064a\u0646':'\u0645\u0633\u062f\u062f')+'</span>'+
+          '<span class="bx '+(debt>0?'bxo':'bxg')+'">'+(debt>0?'\u0639\u0644\u064a\u0647 \u062f\u064a\u0646':debt<0?'\u0644\u0647 \u0631\u0635\u064a\u062f':'\u0645\u0633\u062f\u062f')+'</span>'+
         '</div>'+
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'+
           '<div style="background:var(--cr);border-radius:8px;padding:8px;text-align:center" onclick="event.stopPropagation();this.querySelector(\'.cu-blur-cell\').classList.toggle(\'shown\')"><div style="font-size:0.65rem;color:#888;margin-bottom:2px">\u0625\u062c\u0645\u0627\u0644\u064a</div><div class="cu-blur-cell" style="font-size:0.88rem;font-weight:900;color:var(--dk)">'+fmt(Math.round(tot))+' \u062c</div></div>'+
@@ -4622,7 +4748,7 @@ function cuFilterAlpha(l){var s=G('cu-search');if(s){s.value=l;}cuRender();}
 function _saleDetHTML(ref){
   var det='';
   (ref.lines||[]).forEach(function(l){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var inv=_invMap()[l.invId];
     if(!inv)return;
     det+='<div style="font-size:0.7rem;background:rgba(192,57,43,0.05);border-radius:5px;padding:3px 7px;margin-top:2px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'+
       '<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.62rem;font-weight:700;background:#fef3e2;color:#d4812a">'+esc(inv.spec)+'</span>'+
@@ -4631,7 +4757,7 @@ function _saleDetHTML(ref){
   });
   var sGroups={};
   (ref.lines||[]).forEach(function(l){
-    var inv=db.inv.find(function(x){return x.id===l.invId;});
+    var inv=_invMap()[l.invId];
     if(!inv)return;
     var key=inv.spec+'|'+(inv.thick||38)+'|'+(l.price||0);
     if(!sGroups[key])sGroups[key]={spec:inv.spec,thick:inv.thick||38,price:l.price||0,cnt:0,m3:0,pcs:0,val:0};
@@ -4660,14 +4786,18 @@ function _saleDetHTML(ref){
   return det;
 }
 function _invMap(){
-  // خريطة سريعة للمخزون (id → رابطة) — أسرع بكتير من find جوه الحلقات
-  if(!window.__invMapCache||window.__invMapVer!==(db.inv||[]).length){
-    var m={};(db.inv||[]).forEach(function(i){m[i.id]=i;});
-    window.__invMapCache=m;window.__invMapVer=(db.inv||[]).length;
+  // خريطة سريعة للمخزون (id → الرابطة نفسها بالمرجع)
+  // ⚠️ الخريطة بتخزّن *مراجع* للرابطات، فأي تعديل على بيانات رابطة (تكعيب/عدد/نوع)
+  // بيظهر تلقائياً من غير إعادة بناء. الإبطال مطلوب بس لو المصفوفة نفسها اتغيّرت
+  // (إضافة/حذف/استيراد/مزامنة) — وده بيحصل عبر _invalidateInvMap.
+  var arr=db.inv||[];
+  if(!window.__invMapCache||window.__invMapArr!==arr||window.__invMapVer!==arr.length){
+    var m={};arr.forEach(function(i){m[i.id]=i;});
+    window.__invMapCache=m;window.__invMapVer=arr.length;window.__invMapArr=arr;
   }
   return window.__invMapCache;
 }
-function _invalidateInvMap(){window.__invMapCache=null;}
+function _invalidateInvMap(){window.__invMapCache=null;window.__invMapArr=null;}
 function cuOpen(id){
   var c=db.custs.find(function(x){return x.id===id;});if(!c)return;
   _cuId=id;if(!c.payments)c.payments=[];
@@ -4748,7 +4878,7 @@ function cuOpen(id){
     } else if(isRet){
       if(e.ref.note)det+='<div style="font-size:0.72rem;color:#888;margin-bottom:2px">'+e.ref.note+'</div>';
       (e.ref.lines||[]).forEach(function(l){
-        var inv=db.inv.find(function(x){return x.id===l.invId;});
+        var inv=_invMap()[l.invId];
         if(!inv)return;
         det+='<div style="font-size:0.7rem;background:rgba(41,128,185,0.06);border-radius:5px;padding:3px 7px;margin-top:2px">↩️ <b>#'+esc(String(inv.num))+'</b> '+esc(inv.spec)+' | '+(inv.thick||38)+'mm | '+esc(inv.len)+' | '+inv.net.toFixed(3)+' م³</div>';
       });
@@ -4901,7 +5031,7 @@ function cuWaSend(mode){
       if(e.type==='sale'){
         lines.push('🛒 *مبيعة* — '+e.dt+' | '+e.ref.pay);
         (e.ref.lines||[]).forEach(function(l){
-          var inv=db.inv.find(function(x){return x.id===l.invId;});
+          var inv=_invMap()[l.invId];
           var d=l.noNum?{spec:l.spec,net:l.net||0,num:'🏷️'}:(inv?{spec:inv.spec,net:inv.net,num:'#'+inv.num}:null);if(!d)return;
           var nm=inv?('#'+inv.num):'🏷️';
           lines.push('  • '+String(d.spec).toUpperCase()+' '+nm+' | '+(d.net||0).toFixed(3)+'م³ | '+fmt(l.price||0)+' ج/م³ = *'+fmt(Math.round((d.net||0)*(l.price||0)))+' ج*');
@@ -4946,7 +5076,7 @@ function cuWaSend(mode){
         lines.push('');
         lines.push('  فاتورة '+(si+1)+' — '+s.dt+' | '+s.pay);
         (s.lines||[]).forEach(function(l){
-          var inv=db.inv.find(function(x){return x.id===l.invId;});
+          var inv=_invMap()[l.invId];
           var d=l.noNum?{spec:l.spec,thick:l.thick||38,len:l.len,pcs:l.pcs||0,net:l.net||0,num:'🏷️'}
                    :(inv?{spec:inv.spec,thick:inv.thick||38,len:inv.len,pcs:inv.pcs||0,net:inv.net,num:'#'+inv.num}:null);
           if(!d)return;
@@ -4969,9 +5099,19 @@ function cuWaSend(mode){
   lines.push('');lines.push(sep);
   lines.push('💰 الإجمالي: *'+fmt(Math.round(tot))+' ج*');
   lines.push('✅ المدفوع: *'+fmt(Math.round(paid))+' ج*');
-  lines.push('⚠️ الرصيد المستحق: *'+fmt(Math.round(debt))+' ج*');
-  lines.push(sep);
-  lines.push('يرجى التكرم بسداد المستحقات. شكراً لتعاملكم معنا 🙏');
+  if(debt>0){
+    lines.push('⚠️ الرصيد المستحق: *'+fmt(Math.round(debt))+' ج*');
+    lines.push(sep);
+    lines.push('يرجى التكرم بسداد المستحقات. شكراً لتعاملكم معنا 🙏');
+  }else if(debt<0){
+    lines.push('💵 رصيد دائن لحضرتك (عربون): *'+fmt(Math.abs(Math.round(debt)))+' ج*');
+    lines.push(sep);
+    lines.push('شكراً لتعاملكم معنا 🙏');
+  }else{
+    lines.push('✅ الحساب مسوّى بالكامل');
+    lines.push(sep);
+    lines.push('شكراً لتعاملكم معنا 🙏');
+  }
   waOpenMsg(ph, lines.join('\n'));
 }
 function _setPrintTitle(name){
@@ -5071,7 +5211,7 @@ function cuPrint(printMode,prFrom,prTo){
     if(!bundles.length)return;
     var firstRow=true;
     bundles.forEach(function(l){
-      var inv=db.inv.find(function(x){return x.id===l.invId;});
+      var inv=_invMap()[l.invId];
       var _d=l.noNum?{spec:l.spec,thick:l.thick||38,len:l.len,pcs:l.pcs||0,net:l.net||0,num:'🏷️'}:(inv?{spec:inv.spec,thick:inv.thick||38,len:inv.len,pcs:inv.pcs||0,net:inv.net,num:'#'+inv.num}:null);
       if(!_d)return;
       var inv=_d; // بديل موحّد للعرض
@@ -5102,7 +5242,7 @@ function cuPrint(printMode,prFrom,prTo){
     var lbl=isSale?'\uD83D\uDECD \u0645\u0628\u064A\u0639\u0629':isPay?'\uD83D\uDCB5 \u062F\u0641\u0639\u0629':isCharge?'\u2795 \u0625\u0636\u0627\u0641\u0629 \u062F\u064A\u0646':isDisc?'\uD83C\uDFF7 \u062E\u0635\u0645/\u062A\u0633\u0648\u064A\u0629':'\u21A9 \u0645\u0631\u062A\u062C\u0639';
     var det='';
     if(isSale){
-      var bM3=(e.ref.lines||[]).reduce(function(s,l){var inv=db.inv.find(function(x){return x.id===l.invId;});return s+(inv?inv.net:0);},0);
+      var bM3=(e.ref.lines||[]).reduce(function(s,l){var inv=_invMap()[l.invId];return s+(inv?inv.net:0);},0);
       det=(e.ref.lines||[]).length+' \u0631\u0627\u0628\u0637\u0629 | '+bM3.toFixed(3)+' \u0645\u00B3 | '+e.ref.pay;
     }else if(isPay){det=esc((e.ref.method||'')+(e.ref.note?' \u2014 '+e.ref.note:''))+'<b style="color:#b35a00">'+chqDueTag(e.ref,_cuId)+'</b>';}
     else if(isCharge){det=e.ref.note||e.ref.method||'إضافة للدين';}
@@ -5194,7 +5334,7 @@ function cuPrint(printMode,prFrom,prTo){
           '<td style="padding:5px 8px;border:1px solid #e0d5c5;font-size:0.78rem;text-align:center;color:#1e6b3c;font-weight:700">'+(isPay||(!isSale&&!isCharge&&!isDisc)?fmt(Math.round(e.amt))+' \u062C':'\u2014')+'</td>'+
           '<td style="padding:5px 8px;border:1px solid #e0d5c5;font-size:0.78rem;text-align:center;font-weight:900;color:'+(e.bal>0?'#c0392b':'#1e6b3c')+'">'+fmt(Math.round(e.bal))+' \u062C</td></tr>';
       }).join('')+'</tbody>'+
-      (events.length?'<tfoot><tr style="background:'+(debt>0?'#c0392b':'#27ae60')+';color:white;font-weight:900">'+
+      (events.length?'<tfoot><tr style="background:'+(debt>0?'#c0392b':debt<0?'#2c5d8a':'#27ae60')+';color:white;font-weight:900">'+
         '<td colspan="3" style="padding:10px 12px;border:1px solid #e0d5c5;font-size:0.9rem">'+(debt>0?'\uD83D\uDCB0 \u0627\u0644\u0645\u062F\u064A\u0648\u0646\u064A\u0629':debt<0?'\uD83D\uDCB0 \u0644\u0644\u0639\u0645\u064A\u0644':'\u2705 \u062E\u0627\u0644\u0635')+'</td>'+
         '<td colspan="2" style="padding:10px 12px;border:1px solid #e0d5c5;font-size:0.9rem;text-align:center">'+fmt(Math.abs(Math.round(debt)))+' \u062C</td>'+
         '<td style="padding:10px 12px;border:1px solid #e0d5c5;font-size:0.9rem;text-align:center">'+fmt(Math.round(events[events.length-1].bal))+' \u062C</td>'+
@@ -5207,9 +5347,9 @@ function cuPrint(printMode,prFrom,prTo){
       '<table><thead><tr><th>\u0627\u0644\u062A\u0627\u0631\u064A\u062E<\/th><th>\u0627\u0644\u0646\u0648\u0639<\/th><th>\u0627\u0644\u062A\u0641\u0627\u0635\u064A\u0644<\/th><th>\u0645\u062F\u064A\u0646<\/th><th>\u062F\u0627\u0626\u0646<\/th><th>\u0627\u0644\u0631\u0635\u064A\u062F<\/th><\/tr><\/thead>'+
       '<tbody>'+ledgerRows+'<\/tbody><\/table><\/div>':'') +
 
-    '<div style="background:'+(debt>0?'#fdecea':'#f0fff4')+';border-radius:10px;padding:14px 20px;text-align:center;border:2px solid '+(debt>0?'#e74c3c':'#27ae60')+'">'+
-      '<div style="font-size:1rem;font-weight:900;color:'+(debt>0?'#c0392b':'#1e6b3c')+'">'+
-        (debt>0?'\u26A0\uFE0F \u0627\u0644\u0631\u0635\u064A\u062F: '+fmt(Math.round(debt))+' \u062C \u2014 \u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u062F\u0627\u062F':'\u2705 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0633\u0648\u0651\u0649')+
+    '<div style="background:'+(debt>0?'#fdecea':debt<0?'#eef4fb':'#f0fff4')+';border-radius:10px;padding:14px 20px;text-align:center;border:2px solid '+(debt>0?'#e74c3c':debt<0?'#2c5d8a':'#27ae60')+'">'+
+      '<div style="font-size:1rem;font-weight:900;color:'+(debt>0?'#c0392b':debt<0?'#2c5d8a':'#1e6b3c')+'">'+
+        (debt>0?'\u26A0\uFE0F \u0627\u0644\u0631\u0635\u064A\u062F: '+fmt(Math.round(debt))+' \u062C \u2014 \u064A\u0631\u062C\u0649 \u0627\u0644\u0633\u062F\u0627\u062F':(debt<0?'\uD83D\uDCB5 \u0631\u0635\u064A\u062F \u062F\u0627\u0626\u0646 \u0644\u0644\u0639\u0645\u064A\u0644 (\u0639\u0631\u0628\u0648\u0646): '+fmt(Math.abs(Math.round(debt)))+' \u062C':'\u2705 \u0627\u0644\u062D\u0633\u0627\u0628 \u0645\u0633\u0648\u0651\u0649'))+
       '<\/div><\/div>'+
     '<\/div>';
 
@@ -5857,45 +5997,113 @@ function findDupBundles(){
 function recutReport(){
   var box=G('rep-recut');if(!box)return;
   var log=db.recutLog||[];
-  if(!log.length){box.innerHTML='<p style="color:#aaa;font-size:0.85rem;padding:8px">لسه مفيش رابطات معاد تكعيبها. كل ما تعدّل تكعيب رابطة (بزر ✏️ م³ أو في الجرد) هتظهر هنا مجمّعة بالمصنع.</p>';return;}
-  // تجميع بالمصنع
+  if(!log.length){box.innerHTML='<p style="color:#aaa;font-size:0.85rem;padding:8px">لسه مفيش رابطات معاد تكعيبها. كل ما تعدّل تكعيب رابطة هتظهر هنا مجمّعة بالمصنع.</p>';return;}
+  // ── الفلاتر ──
+  var fFac=(G('rc-f-fac')||{value:''}).value;
+  var fTrk=(G('rc-f-truck')||{value:''}).value;
+  var fSh=(G('rc-f-sh')||{value:''}).value;
+  var fSrc=(G('rc-f-src')||{value:''}).value;
+  var fFrom=(G('rc-f-from')||{value:''}).value;
+  var fTo=(G('rc-f-to')||{value:''}).value;
+  var rows=log.filter(function(r){
+    if(fFac&&(r.factory||'(بدون مصنع)')!==fFac)return false;
+    if(fTrk&&String(r.truck||'')!==fTrk)return false;
+    if(fSh&&String(r.shRef||'')!==fSh)return false;
+    if(fSrc&&r.src!==fSrc)return false;
+    if(fFrom&&(r.dt||'')<fFrom)return false;
+    if(fTo&&(r.dt||'')>fTo)return false;
+    return true;
+  });
+  // قايمة المصانع (من كل السجل مش المفلتر)
+  var allFacs=[...new Set(log.map(function(r){return r.factory||'(بدون مصنع)';}))].sort();
+  var facSel=G('rc-f-fac');
+  if(facSel&&facSel.options.length!==allFacs.length+1){
+    var cur=facSel.value;
+    facSel.innerHTML='<option value="">كل المصانع</option>'+allFacs.map(function(f){return '<option value="'+escAttr(f)+'"'+(f===cur?' selected':'')+'>'+esc(f)+'</option>';}).join('');
+  }
+  var allShs=[...new Set(log.map(function(r){return String(r.shRef||'');}).filter(Boolean))].sort();
+  var shSel2=G('rc-f-sh');
+  if(shSel2&&shSel2.options.length!==allShs.length+1){
+    var curS=shSel2.value;
+    shSel2.innerHTML='<option value="">كل الشحنات</option>'+allShs.map(function(x){return '<option value="'+escAttr(x)+'"'+(x===curS?' selected':'')+'>'+esc(x)+'</option>';}).join('');
+  }
+  var allTrks=[...new Set(log.map(function(r){return String(r.truck||'');}).filter(Boolean))].sort(function(a,b){return String(a).localeCompare(String(b),'ar',{numeric:true});});
+  var trkSel=G('rc-f-truck');
+  if(trkSel&&trkSel.options.length!==allTrks.length+1){
+    var curT=trkSel.value;
+    trkSel.innerHTML='<option value="">🚚 كل العربيات</option>'+allTrks.map(function(t){return '<option value="'+escAttr(t)+'"'+(t===curT?' selected':'')+'>🚚 '+esc(t)+'</option>';}).join('');
+  }
+  if(!rows.length){box.innerHTML='<p style="color:#aaa;font-size:0.85rem;padding:8px">مفيش نتائج بالفلاتر دي</p>';return;}
+  // ── التجميع بالمصنع ──
   var byFac={};
-  log.forEach(function(r){
+  rows.forEach(function(r){
     var f=r.factory||'(بدون مصنع)';
     if(!byFac[f])byFac[f]={cnt:0,totalDiff:0,deficit:0,surplus:0,items:[]};
-    byFac[f].cnt++;
-    byFac[f].totalDiff+=(r.diff||0);
-    if(r.diff<0)byFac[f].deficit+=Math.abs(r.diff);
-    else if(r.diff>0)byFac[f].surplus+=r.diff;
+    byFac[f].cnt++;byFac[f].totalDiff+=(r.diff||0);
+    if(r.diff<0)byFac[f].deficit+=Math.abs(r.diff);else if(r.diff>0)byFac[f].surplus+=r.diff;
     byFac[f].items.push(r);
   });
-  // ترتيب المصانع: الأسوأ أولاً (الأكثر عجزاً — أصغر متوسط)
-  var facs=Object.keys(byFac).sort(function(a,b){
-    return (byFac[a].totalDiff/byFac[a].cnt)-(byFac[b].totalDiff/byFac[b].cnt);
+  var facs=Object.keys(byFac).sort(function(a,b){return (byFac[a].totalDiff/byFac[a].cnt)-(byFac[b].totalDiff/byFac[b].cnt);});
+  // ── الملخص العلوي ──
+  var tDef=rows.filter(function(r){return r.diff<0;}).reduce(function(s2,r){return s2+Math.abs(r.diff);},0);
+  var tSur=rows.filter(function(r){return r.diff>0;}).reduce(function(s2,r){return s2+r.diff;},0);
+  var worst=facs.length?facs[0]:'—';
+  var worstAvg=facs.length?(byFac[worst].totalDiff/byFac[worst].cnt):0;
+  var h='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:14px">'
+    +'<div style="background:#fdecea;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #c0392b">'
+      +'<div style="font-size:1.15rem;font-weight:900;color:#c0392b">'+tDef.toFixed(3)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">م³ إجمالي العجز</div></div>'
+    +'<div style="background:#e8f7ef;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #1e6b3c">'
+      +'<div style="font-size:1.15rem;font-weight:900;color:#1e6b3c">'+tSur.toFixed(3)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">م³ إجمالي الزيادة</div></div>'
+    +'<div style="background:#f9f5f0;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #8a7a68">'
+      +'<div style="font-size:1.15rem;font-weight:900;color:var(--dk)">'+fmt(rows.length)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">رابطة معاد تكعيبها</div></div>'
+    +'<div style="background:#fff8ec;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #d4812a">'
+      +'<div style="font-size:0.88rem;font-weight:900;color:#b8792a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(worst)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">أسوأ مصنع ('+(worstAvg<0?'عجز '+Math.abs(worstAvg).toFixed(3):'+'+worstAvg.toFixed(3))+'/رابطة)</div></div>';
+  // 🚚 أسوأ عربية (لو فيه أرقام عربيات مسجلة)
+  var byTrk={};
+  rows.forEach(function(r){
+    var t=String(r.truck||'');if(!t)return;
+    if(!byTrk[t])byTrk[t]={cnt:0,tot:0};
+    byTrk[t].cnt++;byTrk[t].tot+=(r.diff||0);
   });
-  var h='<p style="font-size:0.78rem;color:#888;margin:0 0 12px">📉 مرتّبة من الأسوأ (أكتر عجز) للأحسن. العجز = التكعيب الجديد أقل من المسجّل (المصنع بيبالغ). الزيادة = العكس.</p>';
-  facs.forEach(function(f){
+  var trks=Object.keys(byTrk).sort(function(a,b){return (byTrk[a].tot/byTrk[a].cnt)-(byTrk[b].tot/byTrk[b].cnt);});
+  if(trks.length){
+    var wT=trks[0],wTAvg=byTrk[wT].tot/byTrk[wT].cnt;
+    h+='<div style="background:#eef4fb;border-radius:10px;padding:10px;text-align:center;border-right:4px solid #2c5d8a">'
+      +'<div style="font-size:0.95rem;font-weight:900;color:#2c5d8a">🚚 '+esc(wT)+'</div>'
+      +'<div style="font-size:0.68rem;color:#888">أسوأ عربية ('+byTrk[wT].cnt+' رابطة، '+(wTAvg<0?'عجز '+Math.abs(wTAvg).toFixed(3):'+'+wTAvg.toFixed(3))+'/رابطة)</div></div>';
+  }
+  h+='</div>';
+  h+='<p style="font-size:0.74rem;color:#888;margin:0 0 10px">📉 مرتّبة من الأسوأ للأحسن — اضغط على أي مصنع تشوف تفاصيل رابطاته</p>';
+  // ── المصانع (قابلة للطي) ──
+  facs.forEach(function(f,fi){
     var d=byFac[f];
     var avg=d.totalDiff/d.cnt;
     var avgTxt=Math.abs(avg)<0.001?'مظبوط':(avg<0?('عجز '+Math.abs(avg).toFixed(3)+'/رابطة'):('زيادة '+avg.toFixed(3)+'/رابطة'));
     var badge=avg<-0.05?'🔴':(avg<-0.01?'🟠':(Math.abs(avg)<=0.01?'🟢':'🔵'));
-    var headColor=avg<-0.05?'#c0392b':(avg<-0.01?'#d4812a':(Math.abs(avg)<=0.01?'#1e6b3c':'#2c5d8a'));
-    h+='<div style="border:1px solid #e8ddd0;border-radius:10px;margin-bottom:10px;overflow:hidden">'
-      +'<div style="background:#faf7f2;padding:10px 12px;border-bottom:1px solid #eee">'
+    var col=avg<-0.05?'#c0392b':(avg<-0.01?'#d4812a':(Math.abs(avg)<=0.01?'#1e6b3c':'#2c5d8a'));
+    var bid='rcf-'+fi;
+    h+='<div style="border:1px solid #e8ddd0;border-radius:10px;margin-bottom:8px;overflow:hidden">'
+      +'<div onclick="rcToggle(\''+bid+'\')" style="background:#faf7f2;padding:10px 12px;cursor:pointer;user-select:none">'
       +'<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
-      +'<b style="font-size:0.95rem;color:'+headColor+'">'+badge+' '+esc(f)+'</b>'
-      +'<span style="font-size:0.82rem;font-weight:900;color:'+headColor+'">'+avgTxt+'</span></div>'
-      +'<div style="font-size:0.74rem;color:#777;margin-top:4px">'+d.cnt+' رابطة | إجمالي عجز: <b style="color:#c0392b">'+d.deficit.toFixed(3)+'</b> م³ | إجمالي زيادة: <b style="color:#1e6b3c">'+d.surplus.toFixed(3)+'</b> م³ | صافي: <b>'+(d.totalDiff>=0?'+':'')+d.totalDiff.toFixed(3)+'</b> م³</div>'
-      +'</div>';
-    // تفاصيل كل رابطة
-    h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.75rem">'
-      +'<thead><tr style="background:#f5f0e8"><th style="padding:5px">التاريخ</th><th style="padding:5px">الرقم</th><th style="padding:5px">النوع</th><th style="padding:5px">الطول</th><th style="padding:5px">قديم</th><th style="padding:5px">جديد</th><th style="padding:5px">الفرق</th><th style="padding:5px">المصدر</th></tr></thead><tbody>';
+      +'<b style="font-size:0.92rem;color:'+col+'"><span id="'+bid+'-ar">▾</span> '+badge+' '+esc(f)+'</b>'
+      +'<span style="font-size:0.8rem;font-weight:900;color:'+col+'">'+avgTxt+'</span></div>'
+      +'<div style="font-size:0.72rem;color:#777;margin-top:4px">'+d.cnt+' رابطة | عجز: <b style="color:#c0392b">'+d.deficit.toFixed(3)+'</b> | زيادة: <b style="color:#1e6b3c">'+d.surplus.toFixed(3)+'</b> | صافي: <b>'+(d.totalDiff>=0?'+':'')+d.totalDiff.toFixed(3)+'</b> م³</div>'
+      +'</div>'
+      +'<div id="'+bid+'" style="display:none"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.74rem">'
+      +'<thead><tr style="background:#f5f0e8"><th style="padding:5px"><input type="checkbox" onclick="rcSelectAll(this,\''+bid+'\')" title="تحديد الكل" style="width:15px;height:15px;cursor:pointer"></th><th style="padding:5px">التاريخ</th><th style="padding:5px">الرقم</th><th style="padding:5px">🚚 عربية</th><th style="padding:5px">📋 الشحنة</th><th style="padding:5px">النوع</th><th style="padding:5px">الطول</th><th style="padding:5px">قديم</th><th style="padding:5px">جديد</th><th style="padding:5px">الفرق</th><th style="padding:5px">المصدر</th></tr></thead><tbody>';
     d.items.slice().reverse().forEach(function(r){
       var dc=r.diff<-0.001?'#c0392b':(r.diff>0.001?'#1e6b3c':'#888');
       var dt2=r.diff<-0.001?('عجز '+Math.abs(r.diff).toFixed(3)):(r.diff>0.001?('+'+r.diff.toFixed(3)):'مطابق');
       h+='<tr style="border-bottom:1px solid #f5f0e8">'
+        +'<td style="padding:5px;text-align:center"><input type="checkbox" class="rc-chk rc-chk-'+bid+'" value="'+escAttr(r.id||'')+'" onclick="rcUpdateSelCount()" style="width:15px;height:15px;cursor:pointer"></td>'
         +'<td style="padding:5px;text-align:center;color:#999;white-space:nowrap">'+r.dt+'</td>'
         +'<td style="padding:5px;text-align:center"><b>'+(r.num==='🏷️'?'🏷️':'#'+esc(r.num))+'</b></td>'
+        +'<td style="padding:5px;text-align:center"><span style="background:#eef4fb;color:#2c5d8a;padding:1px 6px;border-radius:5px;font-weight:700;font-size:0.7rem">'+(r.truck?esc(String(r.truck)):'—')+'</span></td>'
+        +'<td style="padding:5px;text-align:center;font-size:0.7rem">'+(r.shRef?('<b>'+esc(r.shRef)+'</b>'+(r.shDt?'<div style="color:#999;font-size:0.65rem">'+esc(r.shDt)+'</div>':'')):'—')+'</td>'
         +'<td style="padding:5px;text-align:center">'+esc(r.spec)+'</td>'
         +'<td style="padding:5px;text-align:center">'+esc(String(r.len))+'</td>'
         +'<td style="padding:5px;text-align:center;color:#999">'+(r.oldNet||0).toFixed(3)+'</td>'
@@ -5904,9 +6112,158 @@ function recutReport(){
         +'<td style="padding:5px;text-align:center;font-size:0.68rem;color:#999">'+(r.src==='audit'?'🏷️ جرد':'✏️ تعديل')+'</td>'
         +'</tr>';
     });
-    h+='</tbody></table></div></div>';
+    h+='</tbody></table></div></div></div>';
   });
   box.innerHTML=h;
+}
+function rcSelectAll(cb,bid){
+  var boxes=document.querySelectorAll('.rc-chk-'+bid);
+  boxes.forEach(function(b){b.checked=cb.checked;});
+  rcUpdateSelCount();
+}
+function rcUpdateSelCount(){
+  var n=document.querySelectorAll('.rc-chk:checked').length;
+  var btn=document.getElementById('rc-del-sel');
+  if(btn){
+    btn.style.display=n?'inline-block':'none';
+    btn.textContent='🗑️ مسح المحدد ('+n+')';
+  }
+}
+function rcDelSelected(){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 للمدير فقط');
+  var ids=[...document.querySelectorAll('.rc-chk:checked')].map(function(b){return b.value;}).filter(Boolean);
+  if(!ids.length)return alert('اختار السجلات اللي عايز تمسحها الأول');
+  if(!confirm('🗑️ مسح '+ids.length+' سجل من تقرير جودة المصانع؟\n\nالمسح نهائي — بس ده إحصائي فقط، مش بيأثر على مخزونك ولا مبيعاتك.'))return;
+  var idSet={};ids.forEach(function(i){idSet[i]=1;});
+  // نسجّل المحذوف عشان المزامنة ما ترجّعهوش
+  (db.recutLog||[]).forEach(function(r){if(idSet[r.id]){try{trackDelete(r.id);}catch(e){}}});
+  db.recutLog=(db.recutLog||[]).filter(function(r){return !idSet[r.id];});
+  dbSave();
+  try{auditLog('مسح سجلات جودة المصانع',ids.length+' سجل');}catch(e){}
+  recutReport();
+  showAl('rep-recut-al','✅ اتمسح '+ids.length+' سجل',true);
+}
+function rcToggle(id){
+  var d=document.getElementById(id),a=document.getElementById(id+'-ar');
+  if(!d)return;
+  var on=d.style.display==='none';
+  d.style.display=on?'block':'none';
+  if(a)a.textContent=on?'▴':'▾';
+}
+function recutEnglishReport(){
+  var log=(db.recutLog||[]);
+  var fFac=(G('rc-f-fac')||{value:''}).value,fSrc=(G('rc-f-src')||{value:''}).value;
+  var fTrk=(G('rc-f-truck')||{value:''}).value,fSh=(G('rc-f-sh')||{value:''}).value;
+  var fFrom=(G('rc-f-from')||{value:''}).value,fTo=(G('rc-f-to')||{value:''}).value;
+  var rows=log.filter(function(r){
+    if(fFac&&(r.factory||'(no factory)')!==fFac)return false;
+    if(fTrk&&String(r.truck||'')!==fTrk)return false;
+    if(fSh&&String(r.shRef||'')!==fSh)return false;
+    if(fSrc&&r.src!==fSrc)return false;
+    if(fFrom&&(r.dt||'')<fFrom)return false;
+    if(fTo&&(r.dt||'')>fTo)return false;
+    return true;
+  });
+  if(!rows.length)return alert('No data to report');
+  // Group by factory
+  var byFac={};
+  rows.forEach(function(r){
+    var f=r.factory||'(no factory)';
+    if(!byFac[f])byFac[f]={cnt:0,total:0,shortage:0,surplus:0,items:[]};
+    byFac[f].cnt++;byFac[f].total+=(r.diff||0);
+    if(r.diff<0)byFac[f].shortage+=Math.abs(r.diff);else if(r.diff>0)byFac[f].surplus+=r.diff;
+    byFac[f].items.push(r);
+  });
+  var facs=Object.keys(byFac).sort(function(a,b){return (byFac[a].total/byFac[a].cnt)-(byFac[b].total/byFac[b].cnt);});
+  var tShort=rows.filter(function(r){return r.diff<0;}).reduce(function(a,r){return a+Math.abs(r.diff);},0);
+  var tSur=rows.filter(function(r){return r.diff>0;}).reduce(function(a,r){return a+r.diff;},0);
+  var w=window.open('','_blank');
+  if(!w)return alert('Please allow pop-ups to open the report');
+  var h='<!DOCTYPE html><html lang="en" dir="ltr"><head><meta charset="UTF-8"><title>Measurement Quality Report</title>'
+    +'<style>body{font-family:Arial,Helvetica,sans-serif;padding:24px;color:#222;max-width:1100px;margin:0 auto}'
+    +'h1{margin:0 0 4px;font-size:22px;color:#1f3d2b}.sub{font-size:12px;color:#777;margin-bottom:20px}'
+    +'.sum{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px}'
+    +'.card{flex:1;min-width:150px;border:1px solid #ddd;border-radius:8px;padding:12px;text-align:center}'
+    +'.card b{display:block;font-size:19px;margin-bottom:3px}.card span{font-size:11px;color:#777}'
+    +'h2{font-size:15px;margin:22px 0 6px;padding:8px 10px;background:#f5f5f5;border-radius:6px;border-left:4px solid #888}'
+    +'table{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:10px}'
+    +'th,td{border:1px solid #ddd;padding:6px;text-align:center}th{background:#f0f0f0;font-weight:bold}'
+    +'.neg{color:#c0392b;font-weight:bold}.pos{color:#1e6b3c;font-weight:bold}'
+    +'.note{font-size:11px;color:#888;margin-top:26px;border-top:1px solid #eee;padding-top:10px;line-height:1.7}'
+    +'@media print{body{padding:0}h2{break-after:avoid}}</style></head><body>'
+    +'<h1>&#127758; Timber Measurement Quality Report</h1>'
+    +'<div class="sub">Eagles Wood &mdash; Generated on '+new Date().toLocaleDateString('en-GB')
+    +(fFrom||fTo?(' &nbsp;|&nbsp; Period: '+(fFrom||'...')+' to '+(fTo||'...')):'')
+    +(fFac?(' &nbsp;|&nbsp; Factory: '+esc(fFac)):'')+'</div>'
+    +'<div class="sum">'
+      +'<div class="card"><b class="neg">'+tShort.toFixed(3)+' m&sup3;</b><span>Total Shortage</span></div>'
+      +'<div class="card"><b class="pos">'+tSur.toFixed(3)+' m&sup3;</b><span>Total Surplus</span></div>'
+      +'<div class="card"><b>'+rows.length+'</b><span>Bundles Remeasured</span></div>'
+      +'<div class="card"><b class="neg">'+(tShort-tSur).toFixed(3)+' m&sup3;</b><span>Net Variance</span></div>'
+    +'</div>';
+  facs.forEach(function(f){
+    var d=byFac[f],avg=d.total/d.cnt;
+    h+='<h2>'+esc(f)+' &nbsp;&mdash;&nbsp; '+d.cnt+' bundles &nbsp;|&nbsp; Shortage: <span class="neg">'+d.shortage.toFixed(3)
+      +'</span> m&sup3; &nbsp;|&nbsp; Surplus: <span class="pos">'+d.surplus.toFixed(3)
+      +'</span> m&sup3; &nbsp;|&nbsp; Average: <span class="'+(avg<0?'neg':'pos')+'">'+(avg<0?'':'+')+avg.toFixed(3)+'</span> m&sup3;/bundle</h2>'
+      +'<table><thead><tr><th>Date</th><th>Bundle No.</th><th>Truck No.</th><th>Shipment</th><th>Shipment Date</th><th>Grade</th><th>Thickness</th><th>Length</th><th>Pcs</th><th>Original m&sup3;</th><th>Remeasured m&sup3;</th><th>Variance</th><th>Status</th></tr></thead><tbody>';
+    d.items.slice().reverse().forEach(function(r){
+      var cls=r.diff<-0.001?'neg':(r.diff>0.001?'pos':'');
+      var st=r.diff<-0.001?'Shortage':(r.diff>0.001?'Surplus':'Match');
+      h+='<tr>'
+        +'<td>'+(r.dt||'')+'</td>'
+        +'<td><b>'+(r.num==='🏷️'?'N/A':esc(String(r.num)))+'</b></td>'
+        +'<td>'+(r.truck?esc(String(r.truck)):'-')+'</td>'
+        +'<td>'+(r.shRef?esc(r.shRef):'-')+'</td>'
+        +'<td>'+(r.shDt?esc(r.shDt):'-')+'</td>'
+        +'<td>'+esc(String(r.spec||'').toUpperCase())+'</td>'
+        +'<td>'+(r.thick||'')+' mm</td>'
+        +'<td>'+esc(String(r.len||''))+'</td>'
+        +'<td>'+(r.pcs||0)+'</td>'
+        +'<td>'+(r.oldNet||0).toFixed(3)+'</td>'
+        +'<td><b>'+(r.newNet||0).toFixed(3)+'</b></td>'
+        +'<td class="'+cls+'">'+((r.diff||0)>0?'+':'')+(r.diff||0).toFixed(3)+'</td>'
+        +'<td class="'+cls+'">'+st+'</td>'
+        +'</tr>';
+    });
+    h+='</tbody></table>';
+  });
+  h+='<div class="note"><b>Notes:</b><br>'
+    +'&bull; <b>Original m&sup3;</b> = volume as stated in the supplier packing list.<br>'
+    +'&bull; <b>Remeasured m&sup3;</b> = volume measured at our warehouse in Egypt.<br>'
+    +'&bull; <b>Variance</b> = Remeasured &minus; Original. Negative means shortage.<br>'
+    +'&bull; Bundles marked <b>N/A</b> had their identification number worn off and were matched by specification.'
+    +'</div></body></html>';
+  w.document.write(h);w.document.close();
+  setTimeout(function(){w.print();},700);
+}
+function recutExportXL(){
+  var log=(db.recutLog||[]);
+  var fFac=(G('rc-f-fac')||{value:''}).value,fSrc=(G('rc-f-src')||{value:''}).value;
+  var fTrk=(G('rc-f-truck')||{value:''}).value;
+  var fFrom=(G('rc-f-from')||{value:''}).value,fTo=(G('rc-f-to')||{value:''}).value;
+  var rows=log.filter(function(r){
+    if(fFac&&(r.factory||'(بدون مصنع)')!==fFac)return false;
+    if(fTrk&&String(r.truck||'')!==fTrk)return false;
+    if(fSrc&&r.src!==fSrc)return false;
+    if(fFrom&&(r.dt||'')<fFrom)return false;
+    if(fTo&&(r.dt||'')>fTo)return false;
+    return true;
+  });
+  if(!rows.length)return alert('مفيش بيانات للتصدير');
+  try{
+    var data=[['التاريخ','المصنع','رقم العربية','رقم الرابطة','النوع','السماكة','الطول','العدد','التكعيب القديم','التكعيب الجديد','الفرق','عجز/زيادة','المصدر']];
+    rows.slice().reverse().forEach(function(r){
+      data.push([r.dt||'',r.factory||'(بدون مصنع)',r.truck||'',r.num||'',r.spec||'',r.thick||'',r.len||'',r.pcs||0,
+        r.oldNet||0,r.newNet||0,r.diff||0,
+        (r.diff<-0.001?'عجز':(r.diff>0.001?'زيادة':'مطابق')),
+        (r.src==='audit'?'جرد':'تعديل يدوي')]);
+    });
+    var wb=XLSX.utils.book_new();
+    var ws=XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb,ws,'جودة المصانع');
+    XLSX.writeFile(wb,'جودة-مقاسات-المصانع-'+todayLocal()+'.xlsx');
+  }catch(e){alert('تعذر التصدير: '+e.message);}
 }
 function yearlyStatsRender(){
   var box=G('rep-yearly');if(!box)return;
@@ -5968,8 +6325,9 @@ function yearlyStatsRender(){
   box.innerHTML=h;
 }
 function reportsRender(){
-  yearlyStatsRender();
-  recutReport();
+  // 🛡️ كل تقرير في try مستقل — لو واحد وقع، الباقي يكمّل
+  try{yearlyStatsRender();}catch(e){console.error('yearlyStats:',e);}
+  try{recutReport();}catch(e){console.error('recutReport:',e);}
   var _imR={};db.inv.forEach(function(i){_imR[i.id]=i;});
   var from=(G('rep-from')||{}).value||'';
   var to=(G('rep-to')||{}).value||'';
@@ -6782,6 +7140,21 @@ function cuToggleReveal(){
   if(btn)btn.textContent=on?'🙈 إخفاء الكل':'👁️ إظهار الكل';
 }
 function _reapplyReveal(){if(window._cuRevealAll){var p=document.getElementById('p-cust');if(p){p.querySelectorAll('.cu-blur-cell').forEach(function(el){el.classList.add('shown');});p.querySelectorAll('.sc').forEach(function(el){el.classList.add('revealed');});}}}
+function sbToggleMore(){
+  var d=document.getElementById('sb-more'),b=document.getElementById('sb-more-btn');
+  if(!d)return;
+  var on=d.classList.toggle('on');
+  if(b)b.textContent=on?'⚙️ أدوات أكتر ▴':'⚙️ أدوات أكتر ▾';
+  try{localStorage.setItem('woodstore_sb_more',on?'1':'0');}catch(e){}
+}
+function sbMoreInit(){
+  try{
+    if(localStorage.getItem('woodstore_sb_more')==='1'){
+      var d=document.getElementById('sb-more'),b=document.getElementById('sb-more-btn');
+      if(d){d.classList.add('on');if(b)b.textContent='⚙️ أدوات أكتر ▴';}
+    }
+  }catch(e){}
+}
 function fsChange(dir){
   var cur=parseInt(localStorage.getItem('woodstore_fs')||'16');
   if(dir===0)cur=16; else cur=Math.max(12,Math.min(22,cur+dir));
@@ -7304,6 +7677,60 @@ function payMethodChange(){
   var v=(G('pay-method')||{}).value;
   var f=G('pay-chq-fields');if(f)f.style.display=v==='شيك'?'block':'none';
 }
+function chqBounce(chqId){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
+  if(!db.cheques)return;
+  var chq=db.cheques.find(function(x){return x.id===chqId;});
+  if(!chq)return;
+  if(chq.status==='bounced')return alert('الشيك ده معلّم مرتد بالفعل');
+  var msg='❌ تعليم الشيك كمرتد؟\n\n';
+  msg+='العميل: '+chq.cnm+'\nالمبلغ: '+fmt(chq.amt)+' ج\n';
+  msg+='الاستحقاق: '+(chq.due||chq.dt)+'\n\n';
+  if(chq.status==='collected')msg+='⚠️ الشيك ده كان متحصّل — هيترجع المبلغ من الخزنة.\n\n';
+  msg+='هيحصل إيه:\n';
+  msg+='• المبلغ يرجع على مديونية العميل\n';
+  msg+='• الشيك يفضل مسجّل بعلامة "مرتد" (مش هيتحذف)\n';
+  if(chq.status==='collected')msg+='• حركة التحصيل تتشال من اليومية\n';
+  if(!confirm(msg))return;
+  dbSaveUndo('شيك مرتد');
+  var wasCollected=(chq.status==='collected');
+  chq.status='bounced';
+  chq.bouncedDt=todayLocal();
+  chq.mt=new Date().toISOString();
+  // لو كان متحصّل: شيل حركة اليومية (الفلوس مدخلتش فعلاً)
+  if(wasCollected){
+    db.cashbook=(db.cashbook||[]).filter(function(e){return e.ref!==chqId;});
+    try{trackDeleteCb(chqId);}catch(e){}
+  }
+  // ارجع المبلغ على مديونية العميل: امسح الدفعة المرتبطة بالشيك
+  if(chq.cid&&chq.payId){
+    var cu=db.custs.find(function(c){return c.id===chq.cid;});
+    if(cu&&cu.payments){
+      var pp=cu.payments.find(function(p){return p.id===chq.payId;});
+      if(pp){
+        try{trackDelete(chq.payId);}catch(e){}
+        cu.payments=cu.payments.filter(function(p){return p.id!==chq.payId;});
+      }
+      cu.debt=cuCalcDebt(cu);cu.mt=new Date().toISOString();
+    }
+  }
+  dbSave();chqRenderCusts();
+  try{cuRender();}catch(e){}
+  try{if(typeof _cuId!=='undefined'&&_cuId===chq.cid)cuOpen(_cuId);}catch(e){}
+  try{auditLog('شيك مرتد',chq.cnm+' — '+fmt(chq.amt)+' ج'+(wasCollected?' (كان متحصّل)':''));}catch(e){}
+  _beep();
+  showAl('cu-al','❌ اتعلّم الشيك كمرتد — المبلغ ('+fmt(chq.amt)+' ج) رجع على مديونية '+chq.cnm,false);
+}
+function chqUnbounce(chqId){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
+  var chq=(db.cheques||[]).find(function(x){return x.id===chqId;});
+  if(!chq||chq.status!=='bounced')return;
+  if(!confirm('🔄 رجّع الشيك لحالة "معلّق"؟\n\n(استخدمها لو العميل سدّده أو اتحل الموضوع)'))return;
+  chq.status='pending';chq.bouncedDt='';chq.mt=new Date().toISOString();
+  dbSave();chqRenderCusts();
+  try{auditLog('إلغاء ارتداد شيك',chq.cnm+' — '+fmt(chq.amt)+' ج');}catch(e){}
+  showAl('cu-al','✅ رجع الشيك لحالة معلّق',true);
+}
 function chqCollect(chqId){
   if(!db.cheques)return;
   var chq=db.cheques.find(function(x){return x.id===chqId;});
@@ -7344,7 +7771,14 @@ function chqDel(chqId){
 function chqRenderCusts(){
   var section=G('cu-chq-section');if(!section)return;
   if(!db.cheques)db.cheques=[];
-  var pending=db.cheques.filter(function(c){return c.status==='pending';});
+  // المعلّقة + المرتدة (المرتدة بتفضل ظاهرة بعلامتها عشان تتابعها)
+  var pending=db.cheques.filter(function(c){return c.status==='pending'||c.status==='bounced';});
+  // المرتدة تظهر الأول (محتاجة متابعة)
+  pending.sort(function(a,b){
+    var ab=(a.status==='bounced')?0:1, bb=(b.status==='bounced')?0:1;
+    if(ab!==bb)return ab-bb;
+    return String(a.due||a.dt).localeCompare(String(b.due||b.dt));
+  });
   if(!pending.length){section.style.display='none';return;}
   section.style.display='block';
   var today=todayLocal();
@@ -7359,11 +7793,15 @@ function chqRenderCusts(){
     var dueLabel=isOverdue?'<span style="color:#c0392b;font-weight:900">⚠️ متأخر '+Math.abs(daysLeft)+' يوم</span>':
       daysLeft<=7?'<span style="color:#e67e22;font-weight:700">⏰ باقي '+daysLeft+' يوم</span>':
       '<span style="color:#888">باقي '+daysLeft+' يوم</span>';
-    return '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;border:2px solid '+(isOverdue?'#c0392b':'#e8ddd0')+';background:'+(isOverdue?'#fdecea':'white')+'">'+
+    var isBounced=(c.status==='bounced');
+    return '<div style="padding:10px 12px;margin-bottom:6px;border-radius:8px;border:2px solid '+(isBounced?'#8e2020':(isOverdue?'#c0392b':'#e8ddd0'))+';background:'+(isBounced?'#fbe3e3':(isOverdue?'#fdecea':'white'))+(isBounced?';opacity:0.92':'')+'">'+
       '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'+
-        '<div><strong>'+esc(c.cnm)+'</strong> <span style="font-weight:900;color:#c0392b">'+fmt(c.amt)+' ج</span></div>'+
+        '<div>'+(isBounced?'<span style="background:#8e2020;color:white;font-size:0.65rem;padding:2px 7px;border-radius:5px;font-weight:900;margin-inline-end:5px">❌ مرتد</span>':'')+'<strong>'+esc(c.cnm)+'</strong> <span style="font-weight:900;color:#c0392b">'+fmt(c.amt)+' ج</span></div>'+
         '<div style="display:flex;gap:4px">'+
-          '<button class="btn bg_" style="font-size:0.7rem;padding:4px 10px;touch-action:manipulation" onclick="chqCollect(&quot;'+c.id+'&quot;)">✅ تحصيل</button>'+
+          (c.status==='bounced'
+            ?'<button class="btn bo" style="font-size:0.68rem;padding:4px 8px;touch-action:manipulation" onclick="chqUnbounce(&quot;'+c.id+'&quot;)">🔄 إلغاء الارتداد</button>'
+            :'<button class="btn bg_" style="font-size:0.7rem;padding:4px 10px;touch-action:manipulation" onclick="chqCollect(&quot;'+c.id+'&quot;)">✅ تحصيل</button>'
+             +'<button class="btn" style="font-size:0.68rem;padding:4px 8px;background:#c0392b;color:white;touch-action:manipulation" onclick="chqBounce(&quot;'+c.id+'&quot;)">❌ ارتد</button>')+
           '<button class="btn bd" style="font-size:0.65rem;padding:4px 6px;touch-action:manipulation" onclick="chqDel(&quot;'+c.id+'&quot;)">X</button>'+
         '</div>'+
       '</div>'+
@@ -7386,6 +7824,29 @@ function tableToXL(tableEl,fileName,sheetName){
     var wb=XLSX.utils.book_new();
     var ws=XLSX.utils.table_to_sheet(tableEl,{raw:false});
     XLSX.utils.book_append_sheet(wb,ws,(sheetName||'بيانات').slice(0,30));
+    XLSX.writeFile(wb,(fileName||'تقرير')+'-'+todayLocal()+'.xlsx');
+  }catch(e){alert('تعذر التصدير: '+e.message);}
+}
+function exportPageXL(pageId,fileName){
+  // تصدير كل جداول الصفحة — كل جدول في شيت
+  var pg=document.getElementById(pageId);if(!pg)return alert('الصفحة مش موجودة');
+  var tables=pg.querySelectorAll('table');
+  if(!tables.length)return alert('مفيش جداول للتصدير في الصفحة دي');
+  try{
+    var wb=XLSX.utils.book_new(),added=0;
+    tables.forEach(function(t,i){
+      if(!t.querySelector('tbody tr'))return; // جدول فاضي
+      var nm='';
+      // ندوّر على عنوان قريب
+      var card=t.closest('.card');
+      if(card){var ct=card.querySelector('.ct');if(ct)nm=ct.textContent.replace(/[\\\/\?\*\[\]:]/g,'').trim().slice(0,28);}
+      if(!nm)nm='جدول '+(i+1);
+      var base=nm,k=2;
+      while(wb.SheetNames.indexOf(nm)>=0){nm=base.slice(0,26)+'-'+k;k++;}
+      XLSX.utils.book_append_sheet(wb,XLSX.utils.table_to_sheet(t,{raw:false}),nm);
+      added++;
+    });
+    if(!added)return alert('مفيش بيانات للتصدير');
     XLSX.writeFile(wb,(fileName||'تقرير')+'-'+todayLocal()+'.xlsx');
   }catch(e){alert('تعذر التصدير: '+e.message);}
 }
@@ -7427,7 +7888,7 @@ function exportXL(type){
   }else if(type==='sales'){
     sheetName='المبيعات';
     data=db.sales.map(function(s){
-      var totalM3=(s.lines||[]).reduce(function(sm,l){var inv=db.inv.find(function(x){return x.id===l.invId;});return sm+(inv?inv.net:0);},0);
+      var totalM3=(s.lines||[]).reduce(function(sm,l){var inv=_invMap()[l.invId];return sm+(inv?inv.net:0);},0);
       return {'التاريخ':s.dt,'العميل':s.cnm||'','عدد الربط':(s.lines||[]).length,'م³':Math.round(totalM3*1000)/1000,'السعر':s.price||0,'طريقة الدفع':s.pay||''};
     });
   }else if(type==='custs'){
@@ -7783,6 +8244,7 @@ async function setChangePass(){
 })();
 
 try{fsInit();}catch(e){}
+try{sbMoreInit();}catch(e){}
 </script>
 
 
@@ -7851,7 +8313,11 @@ try{fsInit();}catch(e){}
 </div>
 <!-- WORKERS -->
 <div id="p-workers" class="pg">
-  <div class="ph"><div><h2>👷 العمال والمصاريف</h2></div></div>
+  <div class="ph"><div><h2>👷 العمال والمصاريف</h2></div>
+    <div style="display:flex;gap:6px">
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="exportPageXL('p-workers','العمال-والمصاريف')">📊 إكسل</button>
+    <button class="btn bo" style="font-size:0.76rem;padding:7px 11px" onclick="printBox('p-workers','العمال والمصاريف')">🖨️ طباعة</button>
+    </div></div>
   <div style="display:flex;gap:0;margin-bottom:20px;border-bottom:2px solid var(--pale)">
     <button id="wtab-workers" onclick="wTab('workers')" style="flex:1;padding:12px;border:none;border-bottom:3px solid var(--dk);background:white;font-family:Cairo,sans-serif;font-size:0.88rem;font-weight:700;cursor:pointer;color:var(--dk);touch-action:manipulation">👷 العمال</button>
     <button id="wtab-exp" onclick="wTab('exp')" style="flex:1;padding:12px;border:none;border-bottom:3px solid transparent;background:white;font-family:Cairo,sans-serif;font-size:0.88rem;font-weight:600;cursor:pointer;color:#888;touch-action:manipulation">🚗 المصاريف</button>
