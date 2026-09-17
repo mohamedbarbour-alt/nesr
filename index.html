@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.42 — تقرير المصانع: مسح انتقائي + بيانات الشحنة + تقرير إنجليزي للمصانع الخارجية (يوليو 2026) -->
+<!-- v11.9.43 — إصلاح حرج: خطأ كان بيفضّي صفحة التقارير كلها (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -6001,6 +6001,7 @@ function recutReport(){
   // ── الفلاتر ──
   var fFac=(G('rc-f-fac')||{value:''}).value;
   var fTrk=(G('rc-f-truck')||{value:''}).value;
+  var fSh=(G('rc-f-sh')||{value:''}).value;
   var fSrc=(G('rc-f-src')||{value:''}).value;
   var fFrom=(G('rc-f-from')||{value:''}).value;
   var fTo=(G('rc-f-to')||{value:''}).value;
@@ -6324,8 +6325,9 @@ function yearlyStatsRender(){
   box.innerHTML=h;
 }
 function reportsRender(){
-  yearlyStatsRender();
-  recutReport();
+  // 🛡️ كل تقرير في try مستقل — لو واحد وقع، الباقي يكمّل
+  try{yearlyStatsRender();}catch(e){console.error('yearlyStats:',e);}
+  try{recutReport();}catch(e){console.error('recutReport:',e);}
   var _imR={};db.inv.forEach(function(i){_imR[i.id]=i;});
   var from=(G('rep-from')||{}).value||'';
   var to=(G('rep-to')||{}).value||'';
