@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.41 — زر "شيك ارتد" (يرجّع المبلغ على المديونية ويحتفظ بالسجل) + تصدير إكسل شامل (يوليو 2026) -->
+<!-- v11.9.42 — تقرير المصانع: مسح انتقائي + بيانات الشحنة + تقرير إنجليزي للمصانع الخارجية (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -1106,7 +1106,9 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
     <div class="card" style="margin-top:14px">
       <div class="ch"><span class="ct">📊 جودة مقاسات المصانع</span>
         <div style="display:flex;gap:5px;flex-wrap:wrap">
+          <button class="btn bs adm" id="rc-del-sel" style="display:none;background:#c0392b;color:white" onclick="rcDelSelected()">🗑️ مسح المحدد</button>
           <button class="btn bo bs" onclick="recutExportXL()">📊 إكسل</button>
+          <button class="btn bs" style="background:#2c5d8a;color:white" onclick="recutEnglishReport()">🇬🇧 English</button>
           <button class="btn bo bs" onclick="printBox('rep-recut','جودة مقاسات المصانع')">🖨️ طباعة</button>
           <button class="btn bo bs adm" onclick="recutClear()">🗑️ تصفية</button>
         </div></div>
@@ -1118,6 +1120,10 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
         <div style="display:flex;flex-direction:column">
           <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">🚚 رقم العربية</label>
           <select id="rc-f-truck" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white"><option value="">🚚 كل العربيات</option></select>
+        </div>
+        <div style="display:flex;flex-direction:column">
+          <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">📋 الشحنة</label>
+          <select id="rc-f-sh" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white"><option value="">كل الشحنات</option></select>
         </div>
         <div style="display:flex;flex-direction:column">
           <label style="font-size:0.64rem;color:#8a7a68;font-weight:700;margin-bottom:2px">المصدر</label>
@@ -1136,7 +1142,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
           <input type="date" id="rc-f-to" onchange="recutReport()" style="padding:6px 8px;border:2px solid #e8ddd0;border-radius:7px;font-family:Cairo,sans-serif;font-size:0.78rem;background:white">
         </div>
         <div style="display:flex;flex-direction:column;justify-content:flex-end">
-          <button class="btn bo" style="font-size:0.75rem;padding:6px" onclick="G('rc-f-fac').value='';if(G('rc-f-truck'))G('rc-f-truck').value='';G('rc-f-src').value='';G('rc-f-from').value='';G('rc-f-to').value='';recutReport()">↺ مسح</button>
+          <button class="btn bo" style="font-size:0.75rem;padding:6px" onclick="G('rc-f-fac').value='';if(G('rc-f-truck'))G('rc-f-truck').value='';if(G('rc-f-sh'))G('rc-f-sh').value='';G('rc-f-src').value='';G('rc-f-from').value='';G('rc-f-to').value='';recutReport()">↺ مسح</button>
         </div>
       </div>
       <div id="rep-recut-al"></div>
@@ -3474,6 +3480,8 @@ function _logRecut(inv,oldNet,newNet,src,saleId){
     spec:inv.spec||'',
     factory:inv.factory||'',
     truck:String(inv.truck||''),
+    shRef:inv.shRef||'',
+    shDt:(function(){var sh=(db.ships||[]).find(function(x){return x.id===inv.shId;});return sh?(sh.dt||''):'';})(),
     thick:inv.thick||38,
     len:inv.len||'',
     pcs:inv.pcs||0,
@@ -5999,6 +6007,7 @@ function recutReport(){
   var rows=log.filter(function(r){
     if(fFac&&(r.factory||'(بدون مصنع)')!==fFac)return false;
     if(fTrk&&String(r.truck||'')!==fTrk)return false;
+    if(fSh&&String(r.shRef||'')!==fSh)return false;
     if(fSrc&&r.src!==fSrc)return false;
     if(fFrom&&(r.dt||'')<fFrom)return false;
     if(fTo&&(r.dt||'')>fTo)return false;
@@ -6010,6 +6019,12 @@ function recutReport(){
   if(facSel&&facSel.options.length!==allFacs.length+1){
     var cur=facSel.value;
     facSel.innerHTML='<option value="">كل المصانع</option>'+allFacs.map(function(f){return '<option value="'+escAttr(f)+'"'+(f===cur?' selected':'')+'>'+esc(f)+'</option>';}).join('');
+  }
+  var allShs=[...new Set(log.map(function(r){return String(r.shRef||'');}).filter(Boolean))].sort();
+  var shSel2=G('rc-f-sh');
+  if(shSel2&&shSel2.options.length!==allShs.length+1){
+    var curS=shSel2.value;
+    shSel2.innerHTML='<option value="">كل الشحنات</option>'+allShs.map(function(x){return '<option value="'+escAttr(x)+'"'+(x===curS?' selected':'')+'>'+esc(x)+'</option>';}).join('');
   }
   var allTrks=[...new Set(log.map(function(r){return String(r.truck||'');}).filter(Boolean))].sort(function(a,b){return String(a).localeCompare(String(b),'ar',{numeric:true});});
   var trkSel=G('rc-f-truck');
@@ -6078,14 +6093,16 @@ function recutReport(){
       +'<div style="font-size:0.72rem;color:#777;margin-top:4px">'+d.cnt+' رابطة | عجز: <b style="color:#c0392b">'+d.deficit.toFixed(3)+'</b> | زيادة: <b style="color:#1e6b3c">'+d.surplus.toFixed(3)+'</b> | صافي: <b>'+(d.totalDiff>=0?'+':'')+d.totalDiff.toFixed(3)+'</b> م³</div>'
       +'</div>'
       +'<div id="'+bid+'" style="display:none"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.74rem">'
-      +'<thead><tr style="background:#f5f0e8"><th style="padding:5px">التاريخ</th><th style="padding:5px">الرقم</th><th style="padding:5px">🚚 عربية</th><th style="padding:5px">النوع</th><th style="padding:5px">الطول</th><th style="padding:5px">قديم</th><th style="padding:5px">جديد</th><th style="padding:5px">الفرق</th><th style="padding:5px">المصدر</th></tr></thead><tbody>';
+      +'<thead><tr style="background:#f5f0e8"><th style="padding:5px"><input type="checkbox" onclick="rcSelectAll(this,\''+bid+'\')" title="تحديد الكل" style="width:15px;height:15px;cursor:pointer"></th><th style="padding:5px">التاريخ</th><th style="padding:5px">الرقم</th><th style="padding:5px">🚚 عربية</th><th style="padding:5px">📋 الشحنة</th><th style="padding:5px">النوع</th><th style="padding:5px">الطول</th><th style="padding:5px">قديم</th><th style="padding:5px">جديد</th><th style="padding:5px">الفرق</th><th style="padding:5px">المصدر</th></tr></thead><tbody>';
     d.items.slice().reverse().forEach(function(r){
       var dc=r.diff<-0.001?'#c0392b':(r.diff>0.001?'#1e6b3c':'#888');
       var dt2=r.diff<-0.001?('عجز '+Math.abs(r.diff).toFixed(3)):(r.diff>0.001?('+'+r.diff.toFixed(3)):'مطابق');
       h+='<tr style="border-bottom:1px solid #f5f0e8">'
+        +'<td style="padding:5px;text-align:center"><input type="checkbox" class="rc-chk rc-chk-'+bid+'" value="'+escAttr(r.id||'')+'" onclick="rcUpdateSelCount()" style="width:15px;height:15px;cursor:pointer"></td>'
         +'<td style="padding:5px;text-align:center;color:#999;white-space:nowrap">'+r.dt+'</td>'
         +'<td style="padding:5px;text-align:center"><b>'+(r.num==='🏷️'?'🏷️':'#'+esc(r.num))+'</b></td>'
         +'<td style="padding:5px;text-align:center"><span style="background:#eef4fb;color:#2c5d8a;padding:1px 6px;border-radius:5px;font-weight:700;font-size:0.7rem">'+(r.truck?esc(String(r.truck)):'—')+'</span></td>'
+        +'<td style="padding:5px;text-align:center;font-size:0.7rem">'+(r.shRef?('<b>'+esc(r.shRef)+'</b>'+(r.shDt?'<div style="color:#999;font-size:0.65rem">'+esc(r.shDt)+'</div>':'')):'—')+'</td>'
         +'<td style="padding:5px;text-align:center">'+esc(r.spec)+'</td>'
         +'<td style="padding:5px;text-align:center">'+esc(String(r.len))+'</td>'
         +'<td style="padding:5px;text-align:center;color:#999">'+(r.oldNet||0).toFixed(3)+'</td>'
@@ -6098,12 +6115,126 @@ function recutReport(){
   });
   box.innerHTML=h;
 }
+function rcSelectAll(cb,bid){
+  var boxes=document.querySelectorAll('.rc-chk-'+bid);
+  boxes.forEach(function(b){b.checked=cb.checked;});
+  rcUpdateSelCount();
+}
+function rcUpdateSelCount(){
+  var n=document.querySelectorAll('.rc-chk:checked').length;
+  var btn=document.getElementById('rc-del-sel');
+  if(btn){
+    btn.style.display=n?'inline-block':'none';
+    btn.textContent='🗑️ مسح المحدد ('+n+')';
+  }
+}
+function rcDelSelected(){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 للمدير فقط');
+  var ids=[...document.querySelectorAll('.rc-chk:checked')].map(function(b){return b.value;}).filter(Boolean);
+  if(!ids.length)return alert('اختار السجلات اللي عايز تمسحها الأول');
+  if(!confirm('🗑️ مسح '+ids.length+' سجل من تقرير جودة المصانع؟\n\nالمسح نهائي — بس ده إحصائي فقط، مش بيأثر على مخزونك ولا مبيعاتك.'))return;
+  var idSet={};ids.forEach(function(i){idSet[i]=1;});
+  // نسجّل المحذوف عشان المزامنة ما ترجّعهوش
+  (db.recutLog||[]).forEach(function(r){if(idSet[r.id]){try{trackDelete(r.id);}catch(e){}}});
+  db.recutLog=(db.recutLog||[]).filter(function(r){return !idSet[r.id];});
+  dbSave();
+  try{auditLog('مسح سجلات جودة المصانع',ids.length+' سجل');}catch(e){}
+  recutReport();
+  showAl('rep-recut-al','✅ اتمسح '+ids.length+' سجل',true);
+}
 function rcToggle(id){
   var d=document.getElementById(id),a=document.getElementById(id+'-ar');
   if(!d)return;
   var on=d.style.display==='none';
   d.style.display=on?'block':'none';
   if(a)a.textContent=on?'▴':'▾';
+}
+function recutEnglishReport(){
+  var log=(db.recutLog||[]);
+  var fFac=(G('rc-f-fac')||{value:''}).value,fSrc=(G('rc-f-src')||{value:''}).value;
+  var fTrk=(G('rc-f-truck')||{value:''}).value,fSh=(G('rc-f-sh')||{value:''}).value;
+  var fFrom=(G('rc-f-from')||{value:''}).value,fTo=(G('rc-f-to')||{value:''}).value;
+  var rows=log.filter(function(r){
+    if(fFac&&(r.factory||'(no factory)')!==fFac)return false;
+    if(fTrk&&String(r.truck||'')!==fTrk)return false;
+    if(fSh&&String(r.shRef||'')!==fSh)return false;
+    if(fSrc&&r.src!==fSrc)return false;
+    if(fFrom&&(r.dt||'')<fFrom)return false;
+    if(fTo&&(r.dt||'')>fTo)return false;
+    return true;
+  });
+  if(!rows.length)return alert('No data to report');
+  // Group by factory
+  var byFac={};
+  rows.forEach(function(r){
+    var f=r.factory||'(no factory)';
+    if(!byFac[f])byFac[f]={cnt:0,total:0,shortage:0,surplus:0,items:[]};
+    byFac[f].cnt++;byFac[f].total+=(r.diff||0);
+    if(r.diff<0)byFac[f].shortage+=Math.abs(r.diff);else if(r.diff>0)byFac[f].surplus+=r.diff;
+    byFac[f].items.push(r);
+  });
+  var facs=Object.keys(byFac).sort(function(a,b){return (byFac[a].total/byFac[a].cnt)-(byFac[b].total/byFac[b].cnt);});
+  var tShort=rows.filter(function(r){return r.diff<0;}).reduce(function(a,r){return a+Math.abs(r.diff);},0);
+  var tSur=rows.filter(function(r){return r.diff>0;}).reduce(function(a,r){return a+r.diff;},0);
+  var w=window.open('','_blank');
+  if(!w)return alert('Please allow pop-ups to open the report');
+  var h='<!DOCTYPE html><html lang="en" dir="ltr"><head><meta charset="UTF-8"><title>Measurement Quality Report</title>'
+    +'<style>body{font-family:Arial,Helvetica,sans-serif;padding:24px;color:#222;max-width:1100px;margin:0 auto}'
+    +'h1{margin:0 0 4px;font-size:22px;color:#1f3d2b}.sub{font-size:12px;color:#777;margin-bottom:20px}'
+    +'.sum{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px}'
+    +'.card{flex:1;min-width:150px;border:1px solid #ddd;border-radius:8px;padding:12px;text-align:center}'
+    +'.card b{display:block;font-size:19px;margin-bottom:3px}.card span{font-size:11px;color:#777}'
+    +'h2{font-size:15px;margin:22px 0 6px;padding:8px 10px;background:#f5f5f5;border-radius:6px;border-left:4px solid #888}'
+    +'table{width:100%;border-collapse:collapse;font-size:11.5px;margin-bottom:10px}'
+    +'th,td{border:1px solid #ddd;padding:6px;text-align:center}th{background:#f0f0f0;font-weight:bold}'
+    +'.neg{color:#c0392b;font-weight:bold}.pos{color:#1e6b3c;font-weight:bold}'
+    +'.note{font-size:11px;color:#888;margin-top:26px;border-top:1px solid #eee;padding-top:10px;line-height:1.7}'
+    +'@media print{body{padding:0}h2{break-after:avoid}}</style></head><body>'
+    +'<h1>&#127758; Timber Measurement Quality Report</h1>'
+    +'<div class="sub">Eagles Wood &mdash; Generated on '+new Date().toLocaleDateString('en-GB')
+    +(fFrom||fTo?(' &nbsp;|&nbsp; Period: '+(fFrom||'...')+' to '+(fTo||'...')):'')
+    +(fFac?(' &nbsp;|&nbsp; Factory: '+esc(fFac)):'')+'</div>'
+    +'<div class="sum">'
+      +'<div class="card"><b class="neg">'+tShort.toFixed(3)+' m&sup3;</b><span>Total Shortage</span></div>'
+      +'<div class="card"><b class="pos">'+tSur.toFixed(3)+' m&sup3;</b><span>Total Surplus</span></div>'
+      +'<div class="card"><b>'+rows.length+'</b><span>Bundles Remeasured</span></div>'
+      +'<div class="card"><b class="neg">'+(tShort-tSur).toFixed(3)+' m&sup3;</b><span>Net Variance</span></div>'
+    +'</div>';
+  facs.forEach(function(f){
+    var d=byFac[f],avg=d.total/d.cnt;
+    h+='<h2>'+esc(f)+' &nbsp;&mdash;&nbsp; '+d.cnt+' bundles &nbsp;|&nbsp; Shortage: <span class="neg">'+d.shortage.toFixed(3)
+      +'</span> m&sup3; &nbsp;|&nbsp; Surplus: <span class="pos">'+d.surplus.toFixed(3)
+      +'</span> m&sup3; &nbsp;|&nbsp; Average: <span class="'+(avg<0?'neg':'pos')+'">'+(avg<0?'':'+')+avg.toFixed(3)+'</span> m&sup3;/bundle</h2>'
+      +'<table><thead><tr><th>Date</th><th>Bundle No.</th><th>Truck No.</th><th>Shipment</th><th>Shipment Date</th><th>Grade</th><th>Thickness</th><th>Length</th><th>Pcs</th><th>Original m&sup3;</th><th>Remeasured m&sup3;</th><th>Variance</th><th>Status</th></tr></thead><tbody>';
+    d.items.slice().reverse().forEach(function(r){
+      var cls=r.diff<-0.001?'neg':(r.diff>0.001?'pos':'');
+      var st=r.diff<-0.001?'Shortage':(r.diff>0.001?'Surplus':'Match');
+      h+='<tr>'
+        +'<td>'+(r.dt||'')+'</td>'
+        +'<td><b>'+(r.num==='🏷️'?'N/A':esc(String(r.num)))+'</b></td>'
+        +'<td>'+(r.truck?esc(String(r.truck)):'-')+'</td>'
+        +'<td>'+(r.shRef?esc(r.shRef):'-')+'</td>'
+        +'<td>'+(r.shDt?esc(r.shDt):'-')+'</td>'
+        +'<td>'+esc(String(r.spec||'').toUpperCase())+'</td>'
+        +'<td>'+(r.thick||'')+' mm</td>'
+        +'<td>'+esc(String(r.len||''))+'</td>'
+        +'<td>'+(r.pcs||0)+'</td>'
+        +'<td>'+(r.oldNet||0).toFixed(3)+'</td>'
+        +'<td><b>'+(r.newNet||0).toFixed(3)+'</b></td>'
+        +'<td class="'+cls+'">'+((r.diff||0)>0?'+':'')+(r.diff||0).toFixed(3)+'</td>'
+        +'<td class="'+cls+'">'+st+'</td>'
+        +'</tr>';
+    });
+    h+='</tbody></table>';
+  });
+  h+='<div class="note"><b>Notes:</b><br>'
+    +'&bull; <b>Original m&sup3;</b> = volume as stated in the supplier packing list.<br>'
+    +'&bull; <b>Remeasured m&sup3;</b> = volume measured at our warehouse in Egypt.<br>'
+    +'&bull; <b>Variance</b> = Remeasured &minus; Original. Negative means shortage.<br>'
+    +'&bull; Bundles marked <b>N/A</b> had their identification number worn off and were matched by specification.'
+    +'</div></body></html>';
+  w.document.write(h);w.document.close();
+  setTimeout(function(){w.print();},700);
 }
 function recutExportXL(){
   var log=(db.recutLog||[]);
