@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.43 — إصلاح حرج: خطأ كان بيفضّي صفحة التقارير كلها (يوليو 2026) -->
+<!-- v11.9.44 — زر تنظيف مساحة السيرفر (النسخ التلقائية القديمة) من داخل الإعدادات (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -7985,6 +7985,7 @@ function setInit(){
   try{if(window._attachAuditCard)window._attachAuditCard();}catch(e){}
   try{if(window._attachUsersCard)window._attachUsersCard();}catch(e){}
   try{if(window._attachClaimsCard)window._attachClaimsCard();}catch(e){}
+  try{if(window._attachCleanCard)window._attachCleanCard();}catch(e){}
   // مدة القفل
   var dur=localStorage.getItem('woodstore_lock_min')||'30';
   var sel=G('set-lock-dur');if(sel)sel.value=dur;
@@ -8211,6 +8212,59 @@ async function setChangePass(){
         else alert('⚠️ تعذر المسح — اتأكد من النت');
       }).catch(function(){if(btn){btn.disabled=false;btn.textContent='🔓 مسح الحجوزات المعلقة';}alert('⚠️ تعذر المسح — اتأكد من النت');});
   };
+  window.cleanHistory=function(){
+    if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 للمدير فقط');
+    var sel=document.getElementById('clean-days');
+    var days=sel?parseInt(sel.value):3;
+    if(isNaN(days)||days<1)days=3;
+    var msg='🧹 تنظيف النسخ التلقائية الأقدم من '+days+' يوم؟\n\n';
+    msg+='• بياناتك الحالية مش هتتمس إطلاقاً\n';
+    msg+='• آلة الزمن هتفضل شغالة وترجّعك '+days+' يوم ورا\n';
+    msg+='• المساحة على السيرفر هتقل بشكل كبير\n\n';
+    msg+='(نسختك اليومية على اللابتوب هي الحماية طويلة المدى)';
+    if(!confirm(msg))return;
+    var sess=authGet();if(!sess)return alert('مفيش جلسة — سجّل دخول');
+    var btn=document.getElementById('clean-hist-btn');
+    if(btn){btn.disabled=true;btn.textContent='⏳ جاري التنظيف...';}
+    var cutoff=new Date(Date.now()-days*86400000).toISOString();
+    fetch(SUPA_URL+'/rest/v1/woodstore_history?created_at=lt.'+encodeURIComponent(cutoff),{
+      method:'DELETE',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+sess.access_token,'Prefer':'return=minimal'}
+    }).then(function(r){
+      if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
+      if(r.ok){
+        try{auditLog('تنظيف النسخ التلقائية','أقدم من '+days+' يوم');}catch(e){}
+        alert('✅ اتنضّفت المساحة!\n\nادخل لوحة Supabase بعد دقيقة وشوف "Database size" — هتلاقيه قلّ.\n\nآلة الزمن لسه شغالة وبترجّعك '+days+' يوم ورا.');
+      } else {
+        alert('⚠️ تعذر التنظيف (كود '+r.status+') — اتأكد من النت، ولو المشكلة اتكررت قولّي.');
+      }
+    }).catch(function(){
+      if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
+      alert('⚠️ تعذر التنظيف — اتأكد من النت');
+    });
+  };
+  window._attachCleanCard=function(){
+    try{
+      if(typeof isAdmin!=='function'||!isAdmin())return;
+      if(document.getElementById('clean-card'))return;
+      var sp=document.getElementById('p-settings');if(!sp)return;
+      var d=document.createElement('div');d.className='card';d.id='clean-card';d.style.marginTop='14px';
+      d.innerHTML='<h3 style="margin:0 0 8px">🧹 تنظيف مساحة السيرفر</h3>'
+        +'<p style="font-size:0.8rem;color:#777;margin:0 0 10px;line-height:1.6">البرنامج بياخد نسخة كاملة من بياناتك مع كل حفظ (آلة الزمن). مع الوقت دي بتاكل مساحة كبيرة.<br>'
+        +'<b>الزر ده بيمسح النسخ القديمة بس</b> — بياناتك الحالية في أمان تام.</p>'
+        +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+        +'<label style="font-size:0.8rem;font-weight:700">احتفظ بآخر:</label>'
+        +'<select id="clean-days" style="padding:7px 10px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.85rem">'
+        +'<option value="3" selected>3 أيام (موصى بيه)</option>'
+        +'<option value="7">7 أيام</option>'
+        +'<option value="14">14 يوم</option>'
+        +'</select>'
+        +'<button class="btn bo" id="clean-hist-btn" onclick="cleanHistory()">🧹 نضّف المساحة دلوقتي</button>'
+        +'</div>'
+        +'<p style="font-size:0.72rem;color:#999;margin:10px 0 0">💡 كرّرها كل شهرين-تلاتة. ومهم تفضل تاخد نسختك اليومية على اللابتوب (زر 💾 حفظ).</p>';
+      sp.appendChild(d);
+    }catch(e){}
+  };
   window._attachClaimsCard=function(){
     try{
       if(typeof isAdmin!=='function'||!isAdmin())return;
@@ -8240,7 +8294,7 @@ async function setChangePass(){
       sp.appendChild(d);
     }catch(e){}
   };
-  if(authGet()){window._attachAuditCard();window._attachUsersCard();window._attachClaimsCard();}
+  if(authGet()){window._attachAuditCard();window._attachUsersCard();window._attachClaimsCard();window._attachCleanCard();}
 })();
 
 try{fsInit();}catch(e){}
