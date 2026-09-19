@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.44 — زر تنظيف مساحة السيرفر (النسخ التلقائية القديمة) من داخل الإعدادات (يوليو 2026) -->
+<!-- v11.9.45 — زر التنظيف: يجرّب أسماء الأعمدة المحتملة ويعرض الخطأ الحقيقي (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -8227,21 +8227,33 @@ async function setChangePass(){
     var btn=document.getElementById('clean-hist-btn');
     if(btn){btn.disabled=true;btn.textContent='⏳ جاري التنظيف...';}
     var cutoff=new Date(Date.now()-days*86400000).toISOString();
-    fetch(SUPA_URL+'/rest/v1/woodstore_history?created_at=lt.'+encodeURIComponent(cutoff),{
-      method:'DELETE',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+sess.access_token,'Prefer':'return=minimal'}
-    }).then(function(r){
-      if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
-      if(r.ok){
-        try{auditLog('تنظيف النسخ التلقائية','أقدم من '+days+' يوم');}catch(e){}
-        alert('✅ اتنضّفت المساحة!\n\nادخل لوحة Supabase بعد دقيقة وشوف "Database size" — هتلاقيه قلّ.\n\nآلة الزمن لسه شغالة وبترجّعك '+days+' يوم ورا.');
-      } else {
-        alert('⚠️ تعذر التنظيف (كود '+r.status+') — اتأكد من النت، ولو المشكلة اتكررت قولّي.');
+    // نجرب أسماء أعمدة التاريخ الشائعة (الجدول ممكن يكون created_at أو saved_at أو ts)
+    var cols=['created_at','saved_at','ts','at','inserted_at'];
+    var lastErr='';
+    function tryCol(i){
+      if(i>=cols.length){
+        if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
+        return alert('⚠️ تعذر التنظيف.\n\nتفاصيل الخطأ:\n'+lastErr+'\n\nابعت الرسالة دي عشان نحل المشكلة.');
       }
-    }).catch(function(){
-      if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
-      alert('⚠️ تعذر التنظيف — اتأكد من النت');
-    });
+      fetch(SUPA_URL+'/rest/v1/woodstore_history?'+cols[i]+'=lt.'+encodeURIComponent(cutoff),{
+        method:'DELETE',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+sess.access_token,'Prefer':'return=minimal'}
+      }).then(function(r){
+        if(r.ok){
+          if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
+          try{auditLog('تنظيف النسخ التلقائية','أقدم من '+days+' يوم');}catch(e){}
+          return alert('✅ اتنضّفت المساحة!\n\nادخل لوحة Supabase بعد دقيقة وشوف "Database size" — هتلاقيه قلّ.\n\nآلة الزمن لسه شغالة وبترجّعك '+days+' يوم ورا.');
+        }
+        return r.text().then(function(t){
+          lastErr=(lastErr?lastErr+'\n':'')+'['+cols[i]+'] '+r.status+': '+String(t).slice(0,160);
+          tryCol(i+1);
+        });
+      }).catch(function(e){
+        lastErr=(lastErr?lastErr+'\n':'')+'['+cols[i]+'] '+(e&&e.message?e.message:'شبكة');
+        tryCol(i+1);
+      });
+    }
+    tryCol(0);
   };
   window._attachCleanCard=function(){
     try{
