@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.45 — زر التنظيف: يجرّب أسماء الأعمدة المحتملة ويعرض الخطأ الحقيقي (يوليو 2026) -->
+<!-- v11.9.46 — إصلاح زر التنظيف: العمود الصحيح saved_at (يوليو 2026) -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -8228,7 +8228,7 @@ async function setChangePass(){
     if(btn){btn.disabled=true;btn.textContent='⏳ جاري التنظيف...';}
     var cutoff=new Date(Date.now()-days*86400000).toISOString();
     // نجرب أسماء أعمدة التاريخ الشائعة (الجدول ممكن يكون created_at أو saved_at أو ts)
-    var cols=['created_at','saved_at','ts','at','inserted_at'];
+    var cols=['saved_at','created_at','ts','at','inserted_at'];
     var lastErr='';
     function tryCol(i){
       if(i>=cols.length){
