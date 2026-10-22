@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1f3d2b">
 <link rel="apple-touch-icon" href="icon-192.png">
-<!-- v11.9.46 — إصلاح زر التنظيف: العمود الصحيح saved_at (يوليو 2026) -->
+<!-- v11.9.54 — المرتجعات بتتخصم من المبيعات والتقارير · تعديل البيعة بمسودة (والخصم مايضيعش) · حجز الرُبط بعد التعديل · منع الحفظ مرتين · الأرقام العربي · حضور العامل مايتكررش · مزامنة الجرد والمرتجع ودفعات العملاء · رقم النسخة ورسالة التحديث -->
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -256,6 +256,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
     <div class="dt" id="dt"></div>
     <div id="sync-indicator" onclick="updateSyncIndicator()" style="margin-top:6px;padding:5px 8px;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;text-align:center;cursor:pointer;background:rgba(42,125,79,0.12);color:#2a7d4f;transition:all 0.3s">🟢 متزامن</div>
     <div id="who-badge" style="margin-top:4px;font-family:Cairo,sans-serif;font-size:0.58rem;text-align:center;color:#c9b8a3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+    <div id="ver-badge" style="margin-top:2px;font-family:Cairo,sans-serif;font-size:0.56rem;text-align:center;color:#a89880">نسخة v11.9.54</div>
     <button onclick="doLogout()" style="margin-top:4px;width:100%;background:rgba(192,57,43,0.18);color:#e8b4a8;border:none;border-radius:6px;padding:5px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer">🚪 تسجيل خروج</button>
     <div style="margin-top:5px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
       <button onclick="manualSync()" id="sync-btn" style="padding:6px;background:#2980b9;color:white;border:none;border-radius:6px;font-family:Cairo,sans-serif;font-size:0.68rem;font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:rgba(0,0,0,0)">☁️ رفع</button>
@@ -348,7 +349,8 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
         <div class="f"><label>pieces</label><select id="mc4"></select></div>
         <div class="f"><label>net (م³)</label><select id="mc5"></select></div>
         <div class="f"><label>factory (اختياري)</label><select id="mc6"></select></div>
-        <div class="f"><label>🚚 truck (اختياري)</label><select id="mc7"></select></div>
+        <div class="f"><label>🚚 port — عربية الميناء (اختياري)</label><select id="mc7"></select></div>
+        <div class="f"><label>🏭 truck — عربية المصنع (اختياري)</label><select id="mc8"></select></div>
       </div>
       <button class="btn bp" onclick="previewXL()">👁️ معاينة</button>
     </div>
@@ -466,7 +468,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
   <div class="card" style="padding:12px 14px;margin-bottom:12px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <span style="font-size:0.85rem;font-weight:900;color:var(--dk)">🔎 فلاتر المخزون</span>
-      <button onclick="G('inv-f-num').value='';G('inv-f-spec').value='';G('inv-f-thick').value='';G('inv-f-len').value='';G('inv-f-pcs').value='';G('inv-f-pl').value='';G('inv-f-factory').value='';G('inv-f-truck').value='';if(G('inv-f-truck-q'))G('inv-f-truck-q').value='';invRender()" class="btn bo" style="font-size:0.75rem;padding:6px 12px">↺ مسح الفلتر</button>
+      <button onclick="G('inv-f-num').value='';G('inv-f-spec').value='';G('inv-f-thick').value='';G('inv-f-len').value='';G('inv-f-pcs').value='';G('inv-f-pl').value='';G('inv-f-factory').value='';G('inv-f-truck').value='';if(G('inv-f-truck-q'))G('inv-f-truck-q').value='';if(G('inv-f-ftruck'))G('inv-f-ftruck').value='';invRender()" class="btn bo" style="font-size:0.75rem;padding:6px 12px">↺ مسح الفلتر</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:9px">
       <div style="display:flex;flex-direction:column;min-width:0">
@@ -498,11 +500,15 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
         <select id="inv-f-factory" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white"><option value="">كل المصانع</option></select>
       </div>
       <div style="display:flex;flex-direction:column;min-width:0">
-        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">🚚 رقم العربية</label>
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">🚚 عربية الميناء</label>
         <div style="display:flex;gap:4px">
           <input id="inv-f-truck-q" oninput="invRenderLazy()" placeholder="🔍 دوّر" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;width:62px;flex:0 0 62px">
           <select id="inv-f-truck" onchange="invRender()" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;flex:1;min-width:0"><option value="">كل العربيات</option></select>
         </div>
+      </div>
+      <div style="display:flex;flex-direction:column;min-width:0">
+        <label style="font-size:0.66rem;color:#8a7a68;font-weight:700;margin-bottom:3px">🏭 عربية المصنع</label>
+        <input id="inv-f-ftruck" oninput="invRenderLazy()" placeholder="🔍 اكتب رقم عربية المصنع" style="padding:7px 9px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.82rem;background:white;min-width:0">
       </div>
     </div>
   </div>
@@ -514,9 +520,9 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 
   <div class="card"><div class="scr">
     <table id="inv-t">
-      <thead><tr><th>#</th><th>spec</th><th>number</th><th>thickness</th><th>length</th><th>ألواح</th><th>متاح</th><th>م³</th><th class="adm-col">factory</th><th>🚚 عربية</th><th>شحنة</th></tr></thead>
+      <thead><tr><th>#</th><th>spec</th><th>number</th><th>thickness</th><th>length</th><th>ألواح</th><th>متاح</th><th>م³</th><th class="adm-col">factory</th><th>🚚 عربية الميناء</th><th>🏭 عربية المصنع</th><th>شحنة</th></tr></thead>
       <tbody id="inv-b"></tbody>
-      <tfoot><tr><td colspan="5">الإجمالي</td><td></td><td id="inv-tp">0</td><td id="inv-tn">0.000</td><td colspan="2"></td></tr></tfoot>
+      <tfoot><tr><td colspan="5">الإجمالي</td><td></td><td id="inv-tp">0</td><td id="inv-tn">0.000</td><td colspan="3"></td></tr></tfoot>
     </table>
   </div></div>
 </div>
@@ -609,7 +615,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
           <div style="display:flex;gap:8px">
             <input id="sl-srch" placeholder="اكتب رقم الرابطة..." oninput="slSearch(this.value)"
               style="flex:1;padding:8px 11px;border:2px solid #e8ddd0;border-radius:8px;font-family:Cairo,sans-serif;font-size:0.85rem">
-            <button class="btn bo bs" onclick="G('sl-srch').value='';G('sl-res').innerHTML='';G('sl-f-spec').value='';G('sl-f-thick').value='';G('sl-f-ship').value=''">✕</button>
+            <button class="btn bo bs" onclick="G('sl-srch').value='';G('sl-res').innerHTML='';G('sl-f-spec').value='';G('sl-f-thick').value='';G('sl-f-ship').value='';G('sl-f-len').value='';G('sl-f-pcs').value=''">✕</button>
           </div>
           <div id="sl-res" style="margin-top:8px"></div>
         </div>
@@ -621,6 +627,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
           </div>
         </div>
         <div id="sl-lines"></div>
+        <div id="sl-spec-px" style="display:none;background:white;border:2px solid var(--pale);border-radius:10px;padding:12px;margin-top:10px"></div>
         <div style="background:var(--cr);border-radius:10px;padding:12px;margin-top:10px">
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
             <span style="font-size:0.83rem;font-weight:700;color:var(--dk);white-space:nowrap">💰 سعر موحد للكل:</span>
@@ -979,7 +986,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
       <div class="sg" style="grid-template-columns:repeat(2,1fr);margin-bottom:12px">
         <div class="sc g"><div class="si">💵</div><div class="sv" id="sum-sales-total">0</div><div class="sl_">إجمالي المبيعات</div></div>
         <div class="sc r"><div class="si">💸</div><div class="sv" id="sum-exp-total">0</div><div class="sl_">إجمالي المصاريف</div></div>
-        <div class="sc" style="background:#f0fff4"><div class="si">📈</div><div class="sv" id="sum-profit">0</div><div class="sl_">صافي الربح</div></div>
+        <div class="sc" style="background:#f0fff4"><div class="si">📈</div><div class="sv" id="sum-profit">0</div><div class="sl_" title="مش محسوب فيه تمن شراء الخشب">المبيعات − المصاريف</div></div>
         <div class="sc" style="background:#fff5f5"><div class="si">⏳</div><div class="sv" id="sum-debt-total">0</div><div class="sl_">إجمالي المديونيات</div></div>
         <div class="sc" style="background:#fff8e8"><div class="si">📝</div><div class="sv" id="sum-chq-total">0</div><div class="sl_">شيكات منتظرة</div></div>
       </div>
@@ -1305,6 +1312,7 @@ tfoot td{padding:8px 11px;text-align:center;font-weight:700;background:var(--cr)
 <script>// ======= LOGIN =======
 // كلمات المرور محمية بـ SHA-256 hash
 // ======= تسجيل دخول حقيقي عبر Supabase Auth (v11) =======
+var APP_VER='v11.9.54'; // ⚠️ لازم يطابق رقم النسخة في السطر 10
 var AUTH_KEY='ws_auth_v1';
 function authGet(){try{return JSON.parse(localStorage.getItem(AUTH_KEY)||'null');}catch(e){return null;}}
 function authSave(s){try{localStorage.setItem(AUTH_KEY,JSON.stringify(s));}catch(e){}}
@@ -1561,6 +1569,263 @@ function supaSetCAS(data,casTs){
   });
 }
 // إعادة حساب إجماليات ومديونية العملاء من البيانات الفعلية (بعد الدمج)
+// 💳 دفعة البيعة الفورية (كاش/تحويل/شيك): الـid القديم 'px'+رقم البيعة، أو id جديد فيه sx=رقم البيعة
+// بيانات سطر البيعة (رابطة عادية أو "رقمها ضاع")
+function _lineData(l){
+  if(!l)return null;
+  if(l.noNum)return {spec:l.spec||'',thick:l.thick||38,len:l.len||'',pcs:l.pcs||0,net:l.net||0,num:'🏷️'};
+  var inv=_invMap()[l.invId];
+  return inv?{spec:inv.spec||'',thick:inv.thick||38,len:inv.len||'',pcs:inv.pcs||0,net:inv.net||0,num:inv.num}:null;
+}
+// ═══ 🔄 مزامنة آمنة (v11.9.53) ═══
+// علامة "الجهاز ده عنده تعديلات لسه ماوصلتش للسيرفر" — بتتشال بس لما الرفع ينجح فعلاً
+function _dirtyGet(){try{return localStorage.getItem('woodstore_dirty')||'';}catch(e){return '';}}
+function _dirtySet(){try{localStorage.setItem('woodstore_dirty',new Date().toISOString()+'#'+Math.random().toString(36).slice(2,7));}catch(e){}}
+function _dirtyClear(tok){try{if((localStorage.getItem('woodstore_dirty')||'')===(tok||''))localStorage.removeItem('woodstore_dirty');}catch(e){}}
+// وقت آخر تغيير في "حالة" الشيك (معلّق/متحصّل/مرتد) — منفصل عن أي تعديل تاني في الشيك
+function _chqSt(x){
+  if(!x)return '';
+  if(x.smt)return x.smt;
+  if((x.status&&x.status!=='pending')||x.bouncedDt==='')return x.mt||'';
+  return '';
+}
+// شيك مرتد = الدفعة المرتبطة بيه متتحسبش للعميل (حتى لو رجعت من جهاز تاني بعد الدمج)
+// 🔁 سطور المرتجع في الفاتورة = سجلات المرتجع نفسها (عشان تعديل البيعة على جهاز تاني مايضيعش المرتجع)
+function _retInvariants(){
+  var rl={};
+  (db.returns||[]).forEach(function(r){if(!r||!r.saleId)return;var a=(rl[r.saleId]=rl[r.saleId]||[]);(r.lines||[]).forEach(function(l){if(l&&l.invId)a.push({invId:l.invId,qty:l.qty||1,price:l.price||0});});});
+  var key=function(a){return (a||[]).map(function(x){return x.invId+':'+(x.qty||1);}).sort().join('|');};
+  var n=0;
+  (db.sales||[]).forEach(function(s){
+    if(!s)return;
+    var want=rl[s.id]||[];
+    if(key(want)===key(s.retLines))return;
+    s.retLines=want;
+    var tS=(s.lines||[]).reduce(function(t,l){return t+((l&&l.qty)||0);},0),tR=want.reduce(function(t,l){return t+(l.qty||0);},0);
+    s.returned=tS>0&&tR>=tS;
+    n++;
+  });
+  if(n){try{markInvDirty();recalcInv();}catch(e){}}
+  return n;
+}
+// 🔗 كل بيعة: دفعة فورية واحدة بس (على عميلها) + حركة خزنة واحدة + شيك معلّق واحد
+// (لو نفس البيعة اتعدّلت من جهازين في نفس الوقت، كل جهاز كان بيعمل دفعة/حركة جديدة → بتتكرر)
+function _saleLinkInvariants(){
+  var saleById={};(db.sales||[]).forEach(function(s){if(s&&s.id)saleById[s.id]=s;});
+  var del={};(db.deleted||[]).forEach(function(d){if(d&&d.id)del[d.id]=1;});
+  function pTs(p){var m=String(p.id||'').match(/~([0-9a-z]+)$/);return m?parseInt(m[1],36):0;}
+  var log=[];
+  // (1) دفعة البيعة الفورية
+  (db.custs||[]).forEach(function(c){
+    if(!c||!c.payments||!c.payments.length)return;
+    var bySale={},drop={};
+    c.payments.forEach(function(p){
+      if(!p||p.type!=='pay')return;
+      var sid=p.sx||((/^px/.test(p.id||'')&&String(p.id).indexOf('~')<0)?String(p.id).slice(2):'');
+      if(!sid)return;
+      var s=saleById[sid];
+      if(!s){if(del[sid])drop[p.id]=1;return;}            // البيعة اتمسحت
+      if((s.cid||'')!==c.id||s.pay==='آجل'){drop[p.id]=1;return;} // البيعة بقت لعميل تاني أو آجل
+      (bySale[sid]=bySale[sid]||[]).push(p);
+    });
+    Object.keys(bySale).forEach(function(sid){
+      var ps=bySale[sid];if(ps.length<2)return;
+      var s=saleById[sid],keep=null;
+      if(s.pxId)keep=ps.filter(function(p){return p.id===s.pxId;})[0]||null;
+      if(!keep)keep=ps.slice().sort(function(a,b){return pTs(b)-pTs(a);})[0];
+      ps.forEach(function(p){if(p!==keep)drop[p.id]=1;});
+    });
+    var ids=Object.keys(drop);
+    if(ids.length){
+      c.payments=c.payments.filter(function(p){return !(p&&drop[p.id]);});
+      ids.forEach(function(id){trackDelete(id);var t=db.deleted[db.deleted.length-1];if(t&&t.id===id)t.sys=1;});
+      log.push(c.nm+': '+ids.length+' دفعة مكررة');
+    }
+  });
+  // (2) حركة الخزنة بتاعة البيعة (للبيعات اللي اتعملت/اتعدلت بالنسخة دي بس)
+  var cbBy={};
+  (db.cashbook||[]).forEach(function(e){if(e&&e.ref&&e.tp==='in'&&e.auto&&saleById[e.ref])(cbBy[e.ref]=cbBy[e.ref]||[]).push(e);});
+  var dropC={},nC=0;
+  Object.keys(cbBy).forEach(function(sid){
+    var s=saleById[sid],es=cbBy[sid];
+    if(!('cbId' in s))return; // بيعات قديمة: مانلمسهاش
+    if(s.cbId&&!es.some(function(e){return e.id===s.cbId;}))return; // حركتها لسه مش موجودة → سيب الموجود
+    es.forEach(function(e){if(e.id!==s.cbId){dropC[e.id]=1;nC++;}});
+  });
+  if(nC){
+    Object.keys(dropC).forEach(function(id){trackDelete(id);});
+    db.cashbook=(db.cashbook||[]).filter(function(e){return !(e&&dropC[e.id]);});
+    log.push(nC+' حركة خزنة مكررة');
+  }
+  // (3) الشيك المعلّق: واحد بس لكل بيعة، وميكونش لبيعة اتحولت كاش/آجل
+  var qBy={},dropQ={},nQ=0;
+  (db.cheques||[]).forEach(function(q){if(q&&q.saleId&&q.status==='pending'&&saleById[q.saleId])(qBy[q.saleId]=qBy[q.saleId]||[]).push(q);});
+  Object.keys(qBy).forEach(function(sid){
+    var L=qBy[sid],s=saleById[sid];
+    if(s.pay!=='شيك'){L.forEach(function(q){dropQ[q.id]=1;nQ++;});return;}
+    if(L.length<2)return;
+    L.sort(function(a,b){return a.id<b.id?-1:1;});
+    L.slice(1).forEach(function(q){if(q.note==='من تعديل بيعة'){dropQ[q.id]=1;nQ++;}});
+  });
+  if(nQ){
+    Object.keys(dropQ).forEach(function(id){trackDelete(id);});
+    db.cheques=(db.cheques||[]).filter(function(q){return !(q&&dropQ[q.id]);});
+    log.push(nQ+' شيك معلّق مكرر');
+  }
+  if(log.length){try{auditLog('تصحيح تلقائي بعد المزامنة',log.join('، '));}catch(e){}}
+  return log.length;
+}
+function _chqInvariants(){
+  (db.cheques||[]).forEach(function(q){
+    if(q.status!=='bounced'||!q.cid)return;
+    var cu=(db.custs||[]).find(function(c){return c.id===q.cid;});
+    if(!cu||!cu.payments||!cu.payments.length)return;
+    var kill;
+    if(q.saleId){
+      var sx=(db.sales||[]).find(function(x){return x.id===q.saleId;});
+      if(!sx||sx.pay!=='شيك')return; // البيعة اتحولت لطريقة دفع تانية → دفعتها الجديدة صح
+      if((db.cheques||[]).some(function(o){return o!==q&&o.saleId===q.saleId&&o.status!=='bounced';}))return;
+      kill=function(p){return p.type==='pay'&&_isSalePay(p,q.saleId);};
+    }else{
+      if(!q.payId)return;
+      kill=function(p){return p.id===q.payId;};
+    }
+    var ids=cu.payments.filter(kill).map(function(p){return p.id;});
+    if(!ids.length)return;
+    cu.payments=cu.payments.filter(function(p){return !kill(p);});
+    ids.forEach(function(id){trackDelete(id);});
+  });
+  // حركة "تحصيل شيك" في اليومية لشيك مش متحصّل (اتعلّم مرتد أو اتمسح على جهاز تاني في نفس الوقت) → تتشال
+  var stOf={};(db.cheques||[]).forEach(function(q){if(q&&q.id)stOf[q.id]=q.status;});
+  var delOf={};(db.deleted||[]).forEach(function(d){if(d&&d.id)delOf[d.id]=1;});
+  var drop={},nDrop=0;
+  (db.cashbook||[]).forEach(function(e){
+    if(!e||!e.ref||e.tp==='out'||String(e.ref).indexOf('chq')!==0)return;
+    var st=stOf[e.ref];
+    if(st===undefined){if(delOf[e.ref]){drop[e.id]=1;nDrop++;}return;}
+    if(st!=='collected'){drop[e.id]=1;nDrop++;}
+  });
+  if(nDrop){
+    Object.keys(drop).forEach(function(id){trackDelete(id);});
+    db.cashbook=(db.cashbook||[]).filter(function(e){return !drop[e.id];});
+  }
+}
+// قد إيه المرتجعات قلّلت (أو المفروض تقلّل) دفعة البيعة الفورية
+function _retPayAdj(s){
+  var fee=(typeof payFeePct==='function')?(payFeePct(s.pay)||0):0;
+  return (db.returns||[]).filter(function(r){return r.saleId===s.id;}).reduce(function(t,r){
+    return t+(r.payAdj!==undefined?(r.payAdj||0):Math.round((r.refund||0)*(1-fee/100)));
+  },0);
+}
+// مرتجعات البيعة اللي ماطلعش ليها فلوس من الخزنة (عشان حركة اليومية بعد التعديل تبقى صح)
+function _retNoCashAdj(s){
+  var fee=(typeof payFeePct==='function')?(payFeePct(s.pay)||0):0;
+  return (db.returns||[]).filter(function(r){
+    return r.saleId===s.id&&!(db.cashbook||[]).some(function(e){return e.ref===r.id&&e.tp==='out';});
+  }).reduce(function(t,r){return t+(r.payAdj!==undefined?(r.payAdj||0):Math.round((r.refund||0)*(1-fee/100)));},0);
+}
+// تحديث الصفحة المفتوحة بعد أي مزامنة (عشان مايفضلش زرار قديم زي "تحصيل" لشيك اتحصّل)
+function _refreshCurrentPage(){
+  try{dashRender();}catch(e){}
+  // الصفحة الظاهرة دلوقتي (من الصفحة نفسها، ولو مش متحددة من زرار القايمة)
+  var pgEl=document.querySelector('.pg.on'),nb=document.querySelector('.nb.on');
+  var pg=pgEl?pgEl.id:(nb?(nb.getAttribute('onclick')||''):'');
+  if(!pg)return;
+  try{
+    if(pg.includes('p-inv'))invRender();
+    else if(pg.includes('p-sale'))slHistRender();
+    else if(pg.includes('p-cust')){cuRender();chqRenderCusts();if(_cuId)cuOpen(_cuId);}
+    else if(pg.includes('p-cash'))cbRender();
+    else if(pg.includes('p-workers'))wInit();
+    else if(pg.includes('p-sum'))sumRender();
+  }catch(e){}
+}
+// 🧹 تنظيف: شيكات مكررة عملتها غلطة قديمة في تعديل البيعة (قبل v11.9.53)
+// الغلطة: تعديل بيعة شيكها اتحصّل/ارتد كان بيعمل شيك "معلّق" جديد بنفس المبلغ (ملاحظته «من تعديل بيعة»)
+function _fixDupSaleCheques(){
+  if(typeof isAdmin==='function'&&!isAdmin())return;
+  var by={};
+  (db.cheques||[]).forEach(function(q){if(q&&q.saleId)(by[q.saleId]=by[q.saleId]||[]).push(q);});
+  var kill=[],warn=[];
+  function tsOf(q){var m=String(q.id||'').match(/^chq(\d{13})/);return m?+m[1]:0;}
+  Object.keys(by).forEach(function(sid){
+    var L=by[sid];if(L.length<2)return;
+    L.sort(function(a,b){return tsOf(a)-tsOf(b);});
+    var orig=L[0];
+    if(orig.status!=='collected'&&orig.status!=='bounced')return;
+    L.slice(1).forEach(function(q){
+      if(q.note!=='من تعديل بيعة')return;
+      // الأصلي اتحصّل → المكرر أكيد غلط (الفلوس دخلت خلاص) → يتمسح لوحده
+      if(orig.status==='collected'&&(q.status==='pending'||q.status==='collected'))kill.push(q);
+      // الأصلي مرتد → ممكن تكون اعتبرت المكرر شيك بديل → مانلمسوش، بس ننبّهك
+      else warn.push(q);
+    });
+  });
+  // شيك متحصّل وليه أكتر من حركة تحصيل في اليومية (زرار "تحصيل" اتداس مرتين قبل كده) → الزيادة تتشال
+  var dupCash=[];
+  (db.cheques||[]).forEach(function(q){
+    if(!q||q.status!=='collected')return;
+    var es=(db.cashbook||[]).filter(function(e){return e.ref===q.id&&e.tp!=='out';});
+    if(es.length>1)es.slice(1).forEach(function(e){dupCash.push({e:e,q:q});});
+  });
+  if(!kill.length&&!warn.length&&!dupCash.length)return;
+  var lines=[];
+  if(dupCash.length){
+    var dm={};dupCash.forEach(function(x){dm[x.e.id]=1;trackDelete(x.e.id);lines.push('• '+x.q.cnm+' — '+fmt(x.e.amt||0)+' ج (التحصيل اتسجّل مرتين في اليومية — الحركة الزيادة اتشالت)');});
+    db.cashbook=(db.cashbook||[]).filter(function(e){return !dm[e.id];});
+    if(!kill.length){dbSave();try{auditLog('تنظيف تحصيل شيك مكرر',dupCash.map(function(x){return x.q.cnm+' '+x.e.amt;}).join('، '));}catch(e){}}
+  }
+  if(kill.length){
+    var ids={};kill.forEach(function(q){ids[q.id]=1;});
+    kill.forEach(function(q){
+      trackDelete(q.id);
+      if(q.status==='collected'){ // اتحصّل مرتين → شيل حركة التحصيل الزيادة من اليومية
+        trackDeleteCb(q.id);
+        db.cashbook=(db.cashbook||[]).filter(function(e){return e.ref!==q.id;});
+      }
+      lines.push('• '+q.cnm+' — '+fmt(q.amt)+' ج'+(q.status==='collected'?' (كان اتحصّل مرة تانية — حركة الخزنة الزيادة اتشالت)':' (معلّق مكرر)'));
+    });
+    db.cheques=(db.cheques||[]).filter(function(q){return !ids[q.id];});
+    dbSave();
+    try{chqRenderCusts();}catch(e){}
+    try{auditLog('تنظيف شيكات مكررة',kill.map(function(q){return q.cnm+' '+q.amt+' '+q.status;}).join('، '));}catch(e){}
+  }
+  var wkey='chqdup_warn_'+warn.map(function(q){return q.id;}).join(',');
+  var showWarn=warn.length&&(function(){try{return !localStorage.getItem(wkey);}catch(e){return true;}})();
+  if(!lines.length&&!showWarn)return;
+  var msg='🧹 لقيت تكرار في الشيكات من غلطات قديمة (اتصلحت في النسخة دي):\n\n';
+  if(lines.length)msg+=lines.join('\n')+'\n\n✅ اتمسحت لوحدها — الشيك الأصلي وحساب العميل زي ما هم.\n';
+  if(showWarn){
+    msg+=(lines.length?'\n':'')+'⚠️ محتاجين مراجعة منك (البيعة دي شيكها الأصلي ارتد، واتعمل وراه شيك تاني لوحده):\n'+warn.map(function(q){return '• '+q.cnm+' — '+fmt(q.amt)+' ج ('+({pending:'معلّق',collected:'متحصّل',bounced:'مرتد'}[q.status]||q.status)+')';}).join('\n')+'\n\nلو مكانش فيه شيك بديل فعلاً: امسح الشيك التاني من «تقرير الشيكات» في صفحة الملخصات.';
+    try{localStorage.setItem(wkey,'1');}catch(e){}
+  }
+  alert(msg);
+}
+// 🔁 سطور البيعة اللي لسه مباعة (المرتجع منها اتشال) — للتقارير والملخصات
+function _saleActiveLines(s){
+  var rq=null;
+  if(s&&s.retLines&&s.retLines.length){rq={};s.retLines.forEach(function(r){if(r&&r.invId)rq[r.invId]=(rq[r.invId]||0)+(r.qty||0);});}
+  return ((s&&s.lines)||[]).filter(function(l){
+    if(!l)return false;
+    if(!rq||!l.invId)return true;
+    return (rq[l.invId]||0)<(l.qty||1);
+  });
+}
+// قيمة المرتجعات لكل بيعة
+function _refundMap(){var m={};(db.returns||[]).forEach(function(r){if(r&&r.saleId)m[r.saleId]=(m[r.saleId]||0)+(r.refund||0);});return m;}
+function _isSalePay(p,sid){return !!p&&!!sid&&(p.id==='px'+sid||p.sx===sid);}
+function _rmSalePays(cu,sid){
+  // شيل دفعة البيعة من العميل + علامة حذف "نظامية" (مش حذف يدوي من المستخدم)
+  if(!cu)return 0;
+  var ids=['px'+sid];
+  cu.payments=(cu.payments||[]).filter(function(p){if(_isSalePay(p,sid)){if(ids.indexOf(p.id)<0)ids.push(p.id);return false;}return true;});
+  ids.forEach(function(id){trackDelete(id);var t=db.deleted[db.deleted.length-1];if(t&&t.id===id)t.sys=1;});
+  return ids.length;
+}
+function _userDelSalePay(sid){
+  // المستخدم مسح دفعة البيعة دي بإيده من كشف الحساب؟
+  return (db.deleted||[]).some(function(d){return !d.sys&&d.id&&(d.id==='px'+sid||d.id.indexOf('px'+sid+'~')===0);});
+}
 function _payWasDeleted(pid){
   return (db.deleted||[]).some(function(d){return d.id===pid;});
 }
@@ -1592,6 +1857,9 @@ function _ensurePayIds(){
 function _recalcCustTotals(){
   _ensurePayIds();
   _purgeDeletedPays();
+  try{_retInvariants();}catch(e){}
+  try{_chqInvariants();}catch(e){}
+  try{_saleLinkInvariants();}catch(e){}
   (db.custs||[]).forEach(function(c){
     var saleTot=(db.sales||[]).filter(function(s){return s.cid===c.id;}).reduce(function(s,x){return s+(x.price||0);},0);
     var charges=(c.payments||[]).filter(function(p){return p.type==='charge';}).reduce(function(s,p){return s+(p.amt||0);},0);
@@ -1630,8 +1898,9 @@ function dbLoad(){
       try{
         var remoteTs=rows[0].updated_at||'';
         var localModTs=localStorage.getItem('woodstore_local_mod')||'';
-        var hasPending=localStorage.getItem('woodstore_pending')==='1';
-        if(localModTs&&localModTs>remoteTs){
+        var hasPending=localStorage.getItem('woodstore_pending')==='1'||!!_dirtyGet();
+        // 🛡️ الجهاز ده عنده تعديلات لسه ماترفعتش (حتى لو ساعته متأخرة) → ادمج، متمسحش
+        if((localModTs&&localModTs>remoteTs)||hasPending){
           // المحلي فيه تعديلات أحدث من السيرفر (يمكن لسه ما اترفعتش) — ادمج عشان البيانات متضيعش، وبعدين ارفع
           localStorage.removeItem('woodstore_pending');
           var remote=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;
@@ -1662,7 +1931,7 @@ function dbLoad(){
           // حمّل من السيرفر
           localStorage.removeItem('woodstore_pending');
           var remote=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;
-          db=remote;
+          db=_sanitizeDb(remote);
           db.ships=db.ships||[];db.inv=db.inv||[];db.sales=db.sales||[];
           db.custs=db.custs||[];db.sups=db.sups||[];db.returns=db.returns||[];
           db.cashbook=db.cashbook||[];db.workers=db.workers||[];db.expenses=db.expenses||[];db.cheques=db.cheques||[];db.deleted=db.deleted||[];
@@ -1678,6 +1947,7 @@ function dbLoad(){
           document.body.appendChild(ok);
         }
         setTimeout(function(){ok.remove();},2000);
+        setTimeout(function(){try{_fixDupSaleCheques();}catch(e){}},1500);
       }catch(e){console.error('Supabase parse error',e);}
     } else {
       // أول مرة - ارفع البيانات المحلية
@@ -1695,10 +1965,16 @@ function dbLoad(){
 // مراقبة التحديثات كل 5 ثواني
 function startPolling(){
   if(window._pollTimer)clearInterval(window._pollTimer);
+  if(window._tabBlocked){window._pollTimer=null;return;}
   window._pollTimer=setInterval(function(){
     updateSyncIndicator();
-    // لو في عملية حفظ جارية أو بيانات محلية مستنية رفع — مترفعش فوقها
-    if(window._dbTimer||window._pendingSync||window._uploading)return;
+    // لو في عملية حفظ جارية — استنى
+    if(window._dbTimer||window._uploading)return;
+    // 🔁 فيه تعديلات لسه ماوصلتش للسيرفر: منسحبش فوقها — نعيد محاولة الرفع (مع الدمج) كل 30 ثانية
+    if(window._pendingSync||_dirtyGet()){
+      if(navigator.onLine!==false&&Date.now()-(window._lastRetry||0)>30000){window._lastRetry=Date.now();dbSaveRemote();}
+      return;
+    }
     // الأول: اسأل عن وقت آخر تعديل بس (خفيف) — من غير ما ننزّل كل البيانات
     supaGetMeta().then(function(meta){
       if(!meta||!meta.length)return;
@@ -1707,15 +1983,15 @@ function startPolling(){
       // لو مفيش تحديث جديد على السيرفر — سكب (مفيش تنزيل خالص)
       if(!remoteTs||remoteTs===localSyncTs)return;
       // تأكد تاني إننا مش بنحفظ دلوقتي (ممكن يكون بدأ حفظ أثناء الطلب)
-      if(window._dbTimer||window._pendingSync||window._uploading)return;
+      if(window._dbTimer||window._pendingSync||window._uploading||_dirtyGet())return;
       // فيه تحديث — دلوقتي بس ننزّل البيانات كاملة
       supaGet().then(function(rows){
         if(!rows||!rows.length||!rows[0].data)return;
-        if(window._dbTimer||window._pendingSync||window._uploading)return;
+        if(window._dbTimer||window._pendingSync||window._uploading||_dirtyGet())return;
         var rTs=rows[0].updated_at||remoteTs;
         try{
           var remote=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;
-          db=remote;
+          db=_sanitizeDb(remote);
           db.ships=db.ships||[];db.inv=db.inv||[];db.sales=db.sales||[];
           db.custs=db.custs||[];db.sups=db.sups||[];db.returns=db.returns||[];
           db.cashbook=db.cashbook||[];db.workers=db.workers||[];db.expenses=db.expenses||[];db.cheques=db.cheques||[];db.deleted=db.deleted||[];
@@ -1723,16 +1999,7 @@ function startPolling(){
           persistDB(JSON.stringify(db));
           localStorage.setItem('woodstore_last_sync',rTs);
           localStorage.setItem('woodstore_local_mod',rTs);
-          dashRender();
-          var cur=document.querySelector('.nb.on');
-          if(cur){
-            var pg=cur.getAttribute('onclick')||'';
-            if(pg.includes('p-inv'))invRender();
-            else if(pg.includes('p-sale'))slHistRender();
-            else if(pg.includes('p-cust')){cuRender();if(_cuId)cuOpen(_cuId);}
-            else if(pg.includes('p-cash'))cbRender();
-            else if(pg.includes('p-workers'))wInit();
-          }
+          _refreshCurrentPage();
           var st=G('backup-status');
           if(st){st.style.color='#4dff91';st.textContent='مزامن '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});}
         }catch(e){console.warn('poll parse error',e);}
@@ -1745,6 +2012,10 @@ function dbSyncNow(){
   manualSync();
 }
 function dbPullRemote(){
+  if(window._pendingSync||_dirtyGet()||localStorage.getItem('woodstore_pending')==='1'){
+    if(!confirm('⚠️ فيه تعديلات على الجهاز ده لسه ماترفعتش على السيرفر.\n\nهرفعها الأول وأدمجها مع اللي على السيرفر — مفيش حاجة هتضيع. تمام؟'))return;
+    manualSync();return;
+  }
   var st=G('backup-status');
   if(st){st.style.color='#2980b9';st.textContent='⬇️ جاري سحب البيانات...';}
   supaGet().then(function(rows){
@@ -1754,7 +2025,7 @@ function dbPullRemote(){
     }
     var remoteTs=rows[0].updated_at||'';
     var remote=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;
-    db=remote;
+    db=_sanitizeDb(remote);
     db.ships=db.ships||[];db.inv=db.inv||[];db.sales=db.sales||[];
     db.custs=db.custs||[];db.sups=db.sups||[];db.returns=db.returns||[];
     db.cashbook=db.cashbook||[];db.workers=db.workers||[];db.expenses=db.expenses||[];db.cheques=db.cheques||[];db.deleted=db.deleted||[];
@@ -1762,16 +2033,7 @@ function dbPullRemote(){
     persistDB(JSON.stringify(db));
     localStorage.setItem('woodstore_last_sync',remoteTs);
     localStorage.setItem('woodstore_local_mod',remoteTs);
-    dashRender();
-    var cur=document.querySelector('.nb.on');
-    if(cur){
-      var pg=cur.getAttribute('onclick')||'';
-      if(pg.includes('p-inv'))invRender();
-      else if(pg.includes('p-sale'))slHistRender();
-      else if(pg.includes('p-cust')){cuRender();if(_cuId)cuOpen(_cuId);}
-      else if(pg.includes('p-cash'))cbRender();
-      else if(pg.includes('p-workers'))wInit();
-    }
+    _refreshCurrentPage();
     if(st){st.style.color='#4dff91';st.textContent='✅ تم سحب البيانات من السيرفر';}
   }).catch(function(e){
     if(st){st.style.color='#ffa07a';st.textContent='⚠️ فشل السحب — تأكد من الإنترنت';}
@@ -1783,14 +2045,16 @@ function manualSync(){
   if(btn){btn.disabled=true;btn.textContent='☁️ جاري الرفع...';}
   if(st){st.style.color='#4dff91';st.textContent='جاري رفع البيانات على السيرفر...';}
   try{persistDB(JSON.stringify(db));}catch(e){}
+  var _tokM=_dirtyGet();
   window._uploading=true;updateSyncIndicator();
   _attemptWrite(0).then(function(serverTs){
-    window._pendingSync=false;window._uploading=false;updateSyncIndicator();
-    localStorage.removeItem('woodstore_pending');
+    window._pendingSync=false;window._uploading=false;
+    localStorage.removeItem('woodstore_pending');_dirtyClear(_tokM);updateSyncIndicator();
     var ts=serverTs||new Date().toISOString();
     _checkClockSkew(serverTs);
     localStorage.setItem('woodstore_last_sync',ts);
     localStorage.setItem('woodstore_local_mod',ts);
+    window._mergedRemote=false;_refreshCurrentPage();
     if(st){st.style.color='#4dff91';st.textContent='\u2705 تم الرفع بنجاح — '+new Date().toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'});}
     if(btn){btn.disabled=false;btn.textContent='☁️ رفع على السيرفر';btn.style.background='#27ae60';}
     setTimeout(function(){if(btn)btn.style.background='#2980b9';},2000);
@@ -1819,11 +2083,14 @@ function _checkClockSkew(serverTs){
 function dbSaveRemote(){
   // 1) احفظ محلي فوراً (حتى لو النت فصل البيانات ما تضيعش)
   try{persistDB(JSON.stringify(db));}catch(e){}
+  var _tokS=_dirtyGet(); // العلامة دي تتشال بس لو مفيش تعديل جديد حصل أثناء الرفع
   window._uploading=true;updateSyncIndicator();
   // 2) ارفع بعد قراءة السيرفر ودمجه (عشان متمسحش شغل جهاز تاني)
   _attemptWrite(0).then(function(serverTs){
-    window._pendingSync=false;window._uploading=false;updateSyncIndicator();
-    localStorage.removeItem('woodstore_pending');
+    window._pendingSync=false;window._uploading=false;
+    localStorage.removeItem('woodstore_pending');_dirtyClear(_tokS);updateSyncIndicator();
+    // الدمج جاب تعديلات من جهاز تاني → حدّث الصفحة المفتوحة
+    if(window._mergedRemote){window._mergedRemote=false;_refreshCurrentPage();}
     // خزّن وقت السيرفر الفعلي عشان الـ polling ما يسحبش نفس البيانات تاني
     var ts=serverTs||new Date().toISOString();
     _checkClockSkew(serverTs);
@@ -1846,6 +2113,7 @@ function _attemptWrite(attempt){
     var lastTs='';
     if(rows&&rows.length){
       lastTs=rows[0].updated_at||'';
+      if(lastTs&&lastTs!==(localStorage.getItem('woodstore_last_sync')||''))window._mergedRemote=true;
       if(rows[0].data){
         try{
           var remote=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;
@@ -1853,7 +2121,7 @@ function _attemptWrite(attempt){
           _ensureArrays();
           db.inv.forEach(function(it){it._orig=1;it.avail=it.avail>0?1:0;});
           _invDirty=true;_invalidateInvMap();recalcInv();_ensurePayIds();_recalcCustTotals();
-        }catch(e){console.warn('merge before save failed',e);}
+        }catch(e){console.warn('merge before save failed — مش هنكتب فوق السيرفر',e);throw e;}
       }
     }
     var data=JSON.stringify(db);
@@ -1872,7 +2140,7 @@ function _attemptWrite(attempt){
 // مراقبة النت - لو رجع النت ارفع البيانات المحلية الأحدث
 window.addEventListener('online',function(){
   updateSyncIndicator();
-  var hasPending=window._pendingSync||localStorage.getItem('woodstore_pending')==='1';
+  var hasPending=window._pendingSync||localStorage.getItem('woodstore_pending')==='1'||!!_dirtyGet();
   if(hasPending){
     // فيه تغييرات محلية — نسأل السيرفر الأول ونعمل merge لو لازم
     supaGet().then(function(rows){
@@ -1926,7 +2194,7 @@ window.addEventListener('online',function(){
       var localSyncTs=localStorage.getItem('woodstore_last_sync')||'';
       if(remoteTs&&remoteTs!==localSyncTs){
         var remote=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;
-        db=remote;
+        db=_sanitizeDb(remote);
         db.ships=db.ships||[];db.inv=db.inv||[];db.sales=db.sales||[];
         db.custs=db.custs||[];db.sups=db.sups||[];db.returns=db.returns||[];
         db.cashbook=db.cashbook||[];db.workers=db.workers||[];db.expenses=db.expenses||[];db.cheques=db.cheques||[];db.deleted=db.deleted||[];
@@ -1941,43 +2209,133 @@ window.addEventListener('online',function(){
 });
 
 // ── UNDO ──
-var _undoData=null;
+// التراجع بيرجّع "اللي العملية دي غيّرته بس" فوق آخر نسخة على السيرفر
+// (القديم كان بيرجّع البيانات كلها لصورة من 30 ثانية ويكتبها على السيرفر → كان بيمسح شغل الجهاز التاني)
+var _undoData=null,_undoAfter=null,_undoOpen=false;
 var _undoLabel='';
 function dbSaveUndo(label){
-  _undoData=JSON.stringify(db);
+  _undoData=JSON.stringify(db);_undoAfter=null;_undoOpen=true;
   _undoLabel=label||'عملية';
-  var btn=G('undo-btn');
-  if(btn){btn.style.display='block';btn.textContent='↩️ تراجع: '+_undoLabel;}
-  // يختفي بعد 30 ثانية
+  var btn=G('undo-btn');if(btn)btn.style.display='none';
   if(window._undoTimer)clearTimeout(window._undoTimer);
-  window._undoTimer=setTimeout(function(){_undoData=null;if(btn)btn.style.display='none';},30000);
+  // بعد ما العملية تخلص: لو اتحفظت فعلاً يظهر زرار التراجع — لو اتلغت (قلت لأ) ننسى الصورة
+  setTimeout(function(){
+    _undoOpen=false;
+    if(!_undoAfter){_undoData=null;return;}
+    if(btn){btn.style.display='block';btn.textContent='↩️ تراجع: '+_undoLabel;}
+    window._undoTimer=setTimeout(function(){_undoData=null;_undoAfter=null;if(btn)btn.style.display='none';},30000);
+  },0);
+}
+var _UNDO_ARRS=['ships','inv','sales','returns','cashbook','expenses','cheques','sups','recutLog'];
+// B = قبل العملية، A = بعدها مباشرة، S = آخر نسخة (السيرفر + اللي على الجهاز) → النتيجة
+function _undoCompute(B,A,S){
+  var now=new Date().toISOString(),restored={};
+  var Rz=JSON.parse(JSON.stringify(S||{}));
+  function byId(arr){var m={};(arr||[]).forEach(function(x){if(x&&x.id)m[x.id]=x;});return m;}
+  function js(x){return x===undefined?'':JSON.stringify(x);}
+  function revArr(bA,aA,sA,stamp){
+    var mb=byId(bA),ma=byId(aA),out=(sA||[]).slice(),idx={},ids={};
+    out.forEach(function(x,i){if(x&&x.id)idx[x.id]=i;});
+    Object.keys(mb).forEach(function(k){ids[k]=1;});Object.keys(ma).forEach(function(k){ids[k]=1;});
+    Object.keys(ids).forEach(function(id){
+      if(js(mb[id])===js(ma[id]))return; // العملية مالمستهوش → يفضل زي ما هو على السيرفر
+      if(mb[id]){
+        var v=JSON.parse(JSON.stringify(mb[id]));
+        if(stamp){v.mt=now;if(v.status!==undefined)v.smt=now;}
+        if(idx[id]!==undefined)out[idx[id]]=v;else{out.push(v);idx[id]=out.length-1;}
+        restored[id]=1;
+      }else if(idx[id]!==undefined){out[idx[id]]=null;} // العملية ضافته → يتشال
+    });
+    return out.filter(function(x){return !!x;});
+  }
+  _UNDO_ARRS.forEach(function(k){if(B[k]||A[k])Rz[k]=revArr(B[k],A[k],Rz[k],true);});
+  // العملاء والعمال: الحقول لوحدها + الدفعات/الحركات كل واحدة لوحدها
+  function revNested(k,child){
+    var mb=byId(B[k]),ma=byId(A[k]),out=(Rz[k]||[]).slice(),idx={},ids={};
+    out.forEach(function(x,i){if(x&&x.id)idx[x.id]=i;});
+    Object.keys(mb).forEach(function(i){ids[i]=1;});Object.keys(ma).forEach(function(i){ids[i]=1;});
+    Object.keys(ids).forEach(function(id){
+      var b=mb[id],a=ma[id];
+      if(js(b)===js(a))return;
+      if(!b){if(idx[id]!==undefined)out[idx[id]]=null;return;}
+      if(!a){ // العملية مسحته → يرجع كامل
+        var v=JSON.parse(JSON.stringify(b));v.mt=now;
+        if(idx[id]!==undefined)out[idx[id]]=v;else{out.push(v);idx[id]=out.length-1;}
+        restored[id]=1;(b[child]||[]).forEach(function(c){if(c&&c.id)restored[c.id]=1;});
+        return;
+      }
+      if(idx[id]===undefined)return; // اتمسح من جهاز تاني بعد العملية → سيبه
+      var cur=JSON.parse(JSON.stringify(out[idx[id]])),chg=false,keys={};
+      Object.keys(b).forEach(function(x){keys[x]=1;});Object.keys(a).forEach(function(x){keys[x]=1;});
+      Object.keys(keys).forEach(function(f){
+        if(f===child||f==='mt'||f==='total'||f==='debt')return;
+        if(js(b[f])!==js(a[f])){chg=true;if(b[f]===undefined)delete cur[f];else cur[f]=JSON.parse(JSON.stringify(b[f]));}
+      });
+      cur[child]=revArr(b[child],a[child],cur[child],false);
+      if(chg)cur.mt=now;
+      out[idx[id]]=cur;
+    });
+    Rz[k]=out.filter(function(x){return !!x;});
+  }
+  revNested('custs','payments');
+  revNested('workers','logs');
+  // علامات الحذف اللي العملية عملتها تتشال (عشان اللي رجع مايتمسحش تاني في الدمج)
+  var bT={};(B.deleted||[]).forEach(function(d){if(d&&d.id)bT[d.id]=1;});
+  var added={};(A.deleted||[]).forEach(function(d){if(d&&d.id&&!bT[d.id])added[d.id]=1;});
+  Rz.deleted=(Rz.deleted||[]).filter(function(d){return d&&!added[d.id]&&!restored[d.id];});
+  return Rz;
 }
 function dbUndo(){
-  if(!_undoData)return;
-  db=JSON.parse(_undoData);
-  _undoData=null;
+  if(!_undoData||!_undoAfter)return;
+  var B=JSON.parse(_undoData),A=JSON.parse(_undoAfter),lbl=_undoLabel;
+  _undoData=null;_undoAfter=null;
   var btn=G('undo-btn');if(btn)btn.style.display='none';
-  // التراجع = كتابة مباشرة (بدون دمج) عشان العملية الملغية ما ترجعش من السيرفر
-  try{persistDB(JSON.stringify(db));}catch(e){}
-  window._uploading=true;updateSyncIndicator();
-  supaSet(JSON.stringify(db)).then(function(rows){
-    window._uploading=false;updateSyncIndicator();
-    var ts=(rows&&rows.length&&rows[0].updated_at)?rows[0].updated_at:new Date().toISOString();
-    localStorage.setItem('woodstore_last_sync',ts);localStorage.setItem('woodstore_local_mod',ts);
-    localStorage.removeItem('woodstore_pending');
-  }).catch(function(){window._uploading=false;updateSyncIndicator();localStorage.setItem('woodstore_pending','1');});
-  dashRender();
-  // refresh الصفحة الحالية
-  var cur=document.querySelector('.nb.on');
-  if(cur){
-    var pg=cur.getAttribute('onclick')||'';
-    if(pg.includes('p-inv'))invRender();
-    else if(pg.includes('p-sale'))slHistRender();
-    else if(pg.includes('p-cust')){cuRender();if(_cuId)cuOpen(_cuId);}
-    else if(pg.includes('p-cash'))cbRender();
-    else if(pg.includes('p-workers'))wInit();
+  if(window._undoTimer)clearTimeout(window._undoTimer);
+  function build(S){
+    var R2=_undoCompute(B,A,S);
+    var keep=db;db=R2;
+    try{_ensureArrays();_recalcCustTotals();}catch(e){}
+    R2=db;db=keep;
+    return R2;
   }
-  showAl('sl-al','✅ تم التراجع عن: '+_undoLabel,true);
+  function finish(R2){
+    db=R2;_ensureArrays();
+    db.inv.forEach(function(it){it._orig=1;it.avail=it.avail>0?1:0;});
+    _invDirty=true;try{_invalidateInvMap();}catch(e){}recalcInv();
+    try{persistDB(JSON.stringify(db));}catch(e){}
+    _refreshCurrentPage();
+    showAl('sl-al','✅ تم التراجع عن: '+lbl,true);
+  }
+  var tokU=_dirtyGet(),tries=0;
+  window._uploading=true;updateSyncIndicator();
+  function attempt(){
+    supaGet().then(function(rows){
+      var ts=(rows&&rows.length)?(rows[0].updated_at||''):'';
+      var local=JSON.parse(JSON.stringify(db));
+      var S=local;
+      if(rows&&rows.length&&rows[0].data){
+        var remote=typeof rows[0].data==='string'?JSON.parse(rows[0].data):rows[0].data;
+        S=dbMerge(local,remote); // آخر نسخة = السيرفر + أي حاجة على الجهاز لسه ماترفعتش
+      }
+      var R2=build(S);
+      var useCas=(tries<5&&!!ts);
+      return supaSetCAS(JSON.stringify(R2),useCas?ts:null).then(function(w){
+        if(useCas&&(!w||!w.length)){tries++;setTimeout(attempt,200+Math.floor(Math.random()*250));return;}
+        var nts=(w&&w.length&&w[0].updated_at)?w[0].updated_at:new Date().toISOString();
+        window._uploading=false;window._pendingSync=false;
+        localStorage.setItem('woodstore_last_sync',nts);localStorage.setItem('woodstore_local_mod',nts);
+        localStorage.removeItem('woodstore_pending');_dirtyClear(tokU);updateSyncIndicator();
+        finish(R2);
+      });
+    }).catch(function(){
+      // مفيش نت: طبّق التراجع على الجهاز، ويترفع (مع الدمج) أول ما النت يرجع
+      window._uploading=false;
+      var R2=build(JSON.parse(JSON.stringify(db)));
+      finish(R2);
+      _dirtySet();window._pendingSync=true;localStorage.setItem('woodstore_pending','1');updateSyncIndicator();
+    });
+  }
+  attempt();
 }
 // ═══ MERGE ═══
 function trackDelete(id){
@@ -1989,6 +2347,17 @@ function trackDelete(id){
   var cutStr=cutoff.toISOString();
   db.deleted=db.deleted.filter(function(d){return d.dt>cutStr;});
 }
+// 🧹 شيل أي سطر فاضي/بايظ من البيانات قبل الدمج (عشان الدمج مايقعش ويكتب فوق شغل جهاز تاني)
+function _sanitizeDb(d){
+  if(!d||typeof d!=='object')return d;
+  ['ships','inv','sales','returns','cashbook','expenses','cheques','sups','recutLog','custs','workers','deleted'].forEach(function(k){
+    if(Array.isArray(d[k]))d[k]=d[k].filter(function(x){return x&&typeof x==='object';});
+  });
+  (d.custs||[]).forEach(function(c){if(Array.isArray(c.payments))c.payments=c.payments.filter(function(p){return p&&typeof p==='object';});});
+  (d.workers||[]).forEach(function(w){if(Array.isArray(w.logs))w.logs=w.logs.filter(function(l){return l&&typeof l==='object';});});
+  (d.sales||[]).forEach(function(x){if(Array.isArray(x.lines))x.lines=x.lines.filter(function(l){return l&&typeof l==='object';});});
+  return d;
+}
 function _cleanTombstones(d){
   // علامة حذف لسجل لسه موجود في نفس النسخة = علامة غلط (من باج قديم) — نشيلها عشان السجل ما يتمسحش
   if(!d||!d.deleted||!d.deleted.length)return d;
@@ -1998,21 +2367,22 @@ function _cleanTombstones(d){
   mk(d.cashbook);mk(d.expenses);mk(d.cheques);
   (d.custs||[]).forEach(function(c){if(c&&c.id)live[c.id]=1;mk(c.payments);});
   (d.workers||[]).forEach(function(w){if(w&&w.id)live[w.id]=1;mk(w.logs);});
-  d.deleted=d.deleted.filter(function(t){return !live[t.id];});
+  d.deleted=d.deleted.filter(function(t){return t&&t.id&&!live[t.id];});
   return d;
 }
 function dbMerge(local,remote){
+  _sanitizeDb(local);_sanitizeDb(remote);
   _cleanTombstones(local);_cleanTombstones(remote);
   // جمع كل الـ IDs المحذوفة من الجهازين
   var delMap={};
-  (local.deleted||[]).forEach(function(d){delMap[d.id]=1;});
-  (remote.deleted||[]).forEach(function(d){delMap[d.id]=1;});
+  (local.deleted||[]).forEach(function(d){if(d&&d.id)delMap[d.id]=1;});
+  (remote.deleted||[]).forEach(function(d){if(d&&d.id)delMap[d.id]=1;});
   // دمج مصفوفتين بالـ ID مع استبعاد المحذوفات
   function mergeArr(a,b){
     var map={};
-    (a||[]).forEach(function(x){if(x.id&&!delMap[x.id])map[x.id]=x;});
+    (a||[]).forEach(function(x){if(x&&x.id&&!delMap[x.id])map[x.id]=x;});
     (b||[]).forEach(function(x){
-      if(!x.id||delMap[x.id])return;
+      if(!x||!x.id||delMap[x.id])return;
       var ex=map[x.id];
       // الختم الزمني: النسخة الأحدث تعديلاً تكسب — لو مفيش ختم على الاتنين، المحلي يكسب (زي الأول بالظبط)
       if(!ex||((x.mt||'')>(ex.mt||'')))map[x.id]=x;
@@ -2025,7 +2395,25 @@ function dbMerge(local,remote){
   m.returns=mergeArr(local.returns,remote.returns);
   m.cashbook=mergeArr(local.cashbook,remote.cashbook);
   m.expenses=mergeArr(local.expenses,remote.expenses);
-  m.cheques=mergeArr(local.cheques,remote.cheques);
+  // الشيكات: الأحدث تعديلاً يكسب — بس "حالة" الشيك (معلّق/متحصّل/مرتد) بتتاخد من آخر جهاز غيّرها
+  // (عشان تعديل بيعة على جهاز لسه ماتحدّثش مايرجّعش شيك متحصّل لمعلّق)
+  m.cheques=(function(a,b){
+    var map={};
+    (a||[]).forEach(function(x){if(x&&x.id&&!delMap[x.id])map[x.id]=x;});
+    (b||[]).forEach(function(x){
+      if(!x||!x.id||delMap[x.id])return;
+      var ex=map[x.id];
+      if(!ex){map[x.id]=x;return;}
+      var base=((x.mt||'')>(ex.mt||''))?x:ex, oth=(base===x)?ex:x;
+      if(_chqSt(oth)>_chqSt(base)){
+        base=Object.assign({},base);
+        ['status','collectedDt','bouncedDt','smt','colN','bouncedPay','payId'].forEach(function(k){if(oth[k]===undefined)delete base[k];else base[k]=oth[k];});
+        if(!base.smt)base.smt=_chqSt(oth);
+      }
+      map[x.id]=base;
+    });
+    return Object.values(map);
+  })(local.cheques,remote.cheques);
   m.recutLog=mergeArr(local.recutLog,remote.recutLog).filter(function(r){return !delMap[r.id];});
   // إعدادات مشتركة: طرق الدفع والعمولة — الأحدث يكسب
   var _lMod=local.settingsMt||'',_rMod=remote.settingsMt||'';
@@ -2042,15 +2430,16 @@ function dbMerge(local,remote){
   m.inv=mergeArr(local.inv,remote.inv);
   // العملاء — دمج بالـ ID + دمج الدفعات مع استبعاد المحذوفات
   var cMap={};
-  (local.custs||[]).forEach(function(c){if(!delMap[c.id])cMap[c.id]=JSON.parse(JSON.stringify(c));});
+  (local.custs||[]).forEach(function(c){if(c&&c.id&&!delMap[c.id])cMap[c.id]=JSON.parse(JSON.stringify(c));});
   (remote.custs||[]).forEach(function(c){
-    if(delMap[c.id])return;
+    if(!c||!c.id||delMap[c.id])return;
     if(!cMap[c.id]){cMap[c.id]=c;}
     else{
       // الدفعات من الجهازين بتتلم كلها (زي الأول) — وبيانات العميل نفسها تتاخد من النسخة الأحدث تعديلاً
       var pMap={};
-      (cMap[c.id].payments||[]).forEach(function(p){if(p.id&&!delMap[p.id])pMap[p.id]=p;});
-      (c.payments||[]).forEach(function(p){if(p.id&&!delMap[p.id]&&!pMap[p.id])pMap[p.id]=p;});
+      (cMap[c.id].payments||[]).forEach(function(p){if(p&&p.id&&!delMap[p.id])pMap[p.id]=p;});
+      // نفس الدفعة على الجهازين: الأحدث تعديلاً تكسب (زي قيمة الدفعة بعد مرتجع)
+      (c.payments||[]).forEach(function(p){if(!p||!p.id||delMap[p.id])return;var ex=pMap[p.id];if(!ex||((p.mt||'')>(ex.mt||'')))pMap[p.id]=p;});
       if((c.mt||'')>(cMap[c.id].mt||''))cMap[c.id]=JSON.parse(JSON.stringify(c));
       cMap[c.id].payments=Object.values(pMap);
       // total هيتحسب بعد الدمج من البيانات الفعلية
@@ -2059,14 +2448,14 @@ function dbMerge(local,remote){
   m.custs=Object.values(cMap);
   // العمال — دمج بالـ ID + دمج الـ logs مع استبعاد المحذوفات
   var wMap={};
-  (local.workers||[]).forEach(function(w){if(!delMap[w.id])wMap[w.id]=JSON.parse(JSON.stringify(w));});
+  (local.workers||[]).forEach(function(w){if(w&&w.id&&!delMap[w.id])wMap[w.id]=JSON.parse(JSON.stringify(w));});
   (remote.workers||[]).forEach(function(w){
-    if(delMap[w.id])return;
+    if(!w||!w.id||delMap[w.id])return;
     if(!wMap[w.id]){wMap[w.id]=w;}
     else{
       var lMap={};
-      (wMap[w.id].logs||[]).forEach(function(l){if(l.id&&!delMap[l.id])lMap[l.id]=l;});
-      (w.logs||[]).forEach(function(l){if(l.id&&!delMap[l.id]&&!lMap[l.id])lMap[l.id]=l;});
+      (wMap[w.id].logs||[]).forEach(function(l){if(l&&l.id&&!delMap[l.id])lMap[l.id]=l;});
+      (w.logs||[]).forEach(function(l){if(!l||!l.id||delMap[l.id])return;var ex=lMap[l.id];if(!ex||((l.mt||'')>(ex.mt||'')))lMap[l.id]=l;});
       if((w.mt||'')>(wMap[w.id].mt||''))wMap[w.id]=JSON.parse(JSON.stringify(w));
       wMap[w.id].logs=Object.values(lMap);
     }
@@ -2074,8 +2463,8 @@ function dbMerge(local,remote){
   m.workers=Object.values(wMap);
   // دمج قائمة المحذوفات
   var dMap={};
-  (local.deleted||[]).forEach(function(d){dMap[d.id]=d;});
-  (remote.deleted||[]).forEach(function(d){if(!dMap[d.id])dMap[d.id]=d;});
+  (local.deleted||[]).forEach(function(d){if(d&&d.id)dMap[d.id]=d;});
+  (remote.deleted||[]).forEach(function(d){if(d&&d.id&&!dMap[d.id])dMap[d.id]=d;});
   m.deleted=Object.values(dMap);
   return m;
 }
@@ -2097,7 +2486,7 @@ function updateSyncIndicator(){
   var pending=!!localStorage.getItem('woodstore_pending');
   var localMod=localStorage.getItem('woodstore_local_mod')||'';
   var lastSync=localStorage.getItem('woodstore_last_sync')||'';
-  var hasUnsynced=pending||(localMod&&lastSync&&localMod>lastSync)||(localMod&&!lastSync);
+  var hasUnsynced=pending||!!_dirtyGet()||(localMod&&lastSync&&localMod>lastSync)||(localMod&&!lastSync);
   var txt,color,bg;
   if(!online){txt='🔴 أوفلاين — شغلك محفوظ على الجهاز';color='#c0392b';bg='rgba(192,57,43,0.14)';}
   else if(uploading){txt='🔄 بيزامن دلوقتي...';color='#2980b9';bg='rgba(41,128,185,0.14)';}
@@ -2106,10 +2495,13 @@ function updateSyncIndicator(){
   el.textContent=txt;el.style.color=color;el.style.background=bg;
 }
 function dbSave(){
+  if(window._tabBlocked)return;
   try{_purgeDeletedPays();}catch(e){}
   markInvDirty();
   var data;
   try{data=JSON.stringify(db);}catch(e){alert('خطأ في تجهيز البيانات للحفظ: '+e.message);return;}
+  _dirtySet();
+  if(_undoOpen)_undoAfter=data; // صورة البيانات بعد العملية اللي ممكن نتراجع عنها
   // الرفع للسيرفر يتجدول دايماً عشان البيانات ما تضيعش
   if(window._dbTimer)clearTimeout(window._dbTimer);
   window._dbTimer=setTimeout(function(){window._dbTimer=null;dbSaveRemote();},500);
@@ -2236,7 +2628,7 @@ function dbArchive(){
     supaSet(JSON.stringify(db)).then(function(rows){
       var ts=(rows&&rows.length&&rows[0].updated_at)?rows[0].updated_at:new Date().toISOString();
       localStorage.setItem('woodstore_last_sync',ts);localStorage.setItem('woodstore_local_mod',ts);
-      localStorage.removeItem('woodstore_pending');
+      localStorage.removeItem('woodstore_pending');try{localStorage.removeItem('woodstore_dirty');}catch(e){}
       var after=JSON.stringify(db).length;
       var saved=((before-after)/1024).toFixed(1);
       alert('✅ تمت الأرشفة\nوفرت '+saved+' KB من حجم البيانات');
@@ -2272,7 +2664,7 @@ function dbRestore(){
         supaSet(JSON.stringify(db)).then(function(rows){
           var ts=(rows&&rows.length&&rows[0].updated_at)?rows[0].updated_at:new Date().toISOString();
           localStorage.setItem('woodstore_last_sync',ts);localStorage.setItem('woodstore_local_mod',ts);
-          localStorage.removeItem('woodstore_pending');
+          localStorage.removeItem('woodstore_pending');try{localStorage.removeItem('woodstore_dirty');}catch(e){}
           alert('\u2705 تمت الاستعادة! '+db.inv.length+' رابطة | '+db.custs.length+' عميل | '+db.sales.length+' فاتورة');
           location.reload();
         }).catch(function(){
@@ -2316,6 +2708,7 @@ function dbRestoreFile(input){
       recalcInv();
       persistDB(JSON.stringify(db));
       supaSet(JSON.stringify(db)).then(function(){
+        try{localStorage.removeItem('woodstore_dirty');}catch(e){}
         alert('تم رفع البيانات على السيرفر! '+db.inv.length+' رابطة | '+db.custs.length+' عميل | '+db.sales.length+' فاتورة');
         location.reload();
       }).catch(function(){
@@ -2366,7 +2759,7 @@ function dbRestoreFromText(){
     supaSet(JSON.stringify(db)).then(function(rows){
       var ts=(rows&&rows.length&&rows[0].updated_at)?rows[0].updated_at:new Date().toISOString();
       localStorage.setItem('woodstore_last_sync',ts);localStorage.setItem('woodstore_local_mod',ts);
-      localStorage.removeItem('woodstore_pending');
+      localStorage.removeItem('woodstore_pending');try{localStorage.removeItem('woodstore_dirty');}catch(e){}
       var div=document.getElementById("db-restore-modal-div");if(div)div.remove();
       alert("\u2705 تمت الاستعادة! "+db.inv.length+" رابطة | "+db.custs.length+" عميل | "+db.sales.length+" فاتورة");
       location.reload();
@@ -2398,7 +2791,7 @@ function dbRestoreSnap(){
     supaSet(JSON.stringify(db)).then(function(rows){
       var ts=(rows&&rows.length&&rows[0].updated_at)?rows[0].updated_at:new Date().toISOString();
       localStorage.setItem('woodstore_last_sync',ts);localStorage.setItem('woodstore_local_mod',ts);
-      localStorage.removeItem('woodstore_pending');
+      localStorage.removeItem('woodstore_pending');try{localStorage.removeItem('woodstore_dirty');}catch(e){}
       alert('✅ تمت الاستعادة');location.reload();
     }).catch(function(){alert('⚠️ تمت الاستعادة محلياً — تأكد من الإنترنت عشان تتطبق على السيرفر');location.reload();});
   }catch(e){alert('خطأ: '+e.message);}
@@ -2571,22 +2964,74 @@ var dz=G('dz');
 dz.addEventListener('dragover',function(e){e.preventDefault();dz.classList.add('dv');});
 dz.addEventListener('dragleave',function(){dz.classList.remove('dv');});
 dz.addEventListener('drop',function(e){e.preventDefault();dz.classList.remove('dv');if(e.dataTransfer.files[0])readXL(e.dataTransfer.files[0]);});
+// 🔎 أسماء الأعمدة المعروفة (بالترتيب: الأقوى الأول) — إنجليزي/كرواتي/عربي
+var _XL_KEYS=[
+  ['specification','spec','grade','quality','kvaliteta','klasa','sirina','الدرجة','النوع'],
+  ['bundle number','bundle no','bundle #','bundle','number','broj paketa','paket','bundel','broj','num','no','رقم الرابطة'],
+  ['thickness','thick','debljina','deb','السماكة','التخانة'],
+  ['length','len','duzina','الطول'],
+  ['pieces','pcs','boards','komada','kom','qty','العدد','الألواح'],
+  ['net m3','net','m3','volume','kubik','prostor','weight','التكعيب','م3'],
+  ['factory','fabrika','pilana','mill','supplier','المصنع'],
+  ['port','luka','ميناء','الميناء'],
+  ['truck','kamion','otpr','plate','عربية','عربيه']
+];
+function _xlNorm(h){
+  return String(h==null?'':h).toLowerCase().replace(/³/g,'3').replace(/[čć]/g,'c').replace(/ž/g,'z').replace(/š/g,'s').replace(/đ/g,'d').replace(/\s+/g,' ').trim();
+}
+function _xlHit(h,k){
+  if(!h)return false;
+  if(k.length<=3&&/^[a-z0-9#]+$/.test(k))return new RegExp('(^|[^a-z0-9])'+k.replace('#','\\#')+'([^a-z0-9]|$)').test(h);
+  return h.indexOf(k)>=0;
+}
+// يرجّع رقم العمود لكل خانة — كل عمود يتاخد مرة واحدة بس
+function _xlMap(hdr){
+  var H=hdr.map(_xlNorm),used={},res=[];
+  _XL_KEYS.forEach(function(kw,ci){
+    var idx=-1;
+    for(var a=0;a<kw.length&&idx<0;a++){for(var j=0;j<H.length;j++){if(!used[j]&&_xlHit(H[j],kw[a])){idx=j;break;}}}
+    if(idx>=0)used[idx]=1;
+    res[ci]=idx;
+  });
+  return res;
+}
+function _xlScore(row){return _xlMap(row).filter(function(x){return x>=0;}).length;}
+// صف مجموع/إجمالي (GRAND TOTAL، Truck TOTAL، Ukupno...) — مش رابطة
+function _xlIsTotalRow(row){
+  return (row||[]).some(function(c){
+    if(typeof c!=='string')return false;
+    var t=c.trim();
+    return /^→/.test(t)||/(^|[^a-z])(grand\s*total|sub\s*total|total)([^a-z]|$)/i.test(t)||/ukupno|svega|الإجمالي|إجمالي|المجموع/i.test(t);
+  });
+}
 function readXL(file){
   if(!file)return;showAl('up-al','⏳ جاري القراءة...',true);
   var r=new FileReader();
   r.onload=function(e){
     try{
       var wb=XLSX.read(e.target.result,{type:'binary'});
-      var ws=wb.Sheets[wb.SheetNames[0]];
-      var json=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-      if(json.length<2)return showAl('up-al','الملف فارغ',false);
-      var hr=0;
-      for(var ii=0;ii<Math.min(10,json.length);ii++){if(json[ii].some(function(c){return c!=='';})){hr=ii;break;}}
+      // 🔎 دوّر في كل الشيتات وأول 30 صف على صف العناوين الحقيقي (مش بيانات المركب اللي فوق)
+      var json=null,hr=0,_best=-1,_shNm='';
+      wb.SheetNames.forEach(function(sn){
+        var js=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,defval:''});
+        for(var ii=0;ii<Math.min(30,js.length);ii++){
+          if(!js[ii].some(function(c){return c!=='';}))continue;
+          var sc=_xlScore(js[ii]);
+          // لازم رقم الرابطة يتلاقي عشان الصف يتحسب عناوين
+          if(_xlMap(js[ii])[1]<0)sc=Math.min(sc,1);
+          if(sc>_best){_best=sc;json=js;hr=ii;_shNm=sn;}
+        }
+      });
+      if(!json||json.length<2)return showAl('up-al','الملف فارغ',false);
+      if(_best<2){ // معرفناش العناوين — ارجع للطريقة القديمة (أول صف مليان في أول شيت)
+        json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});hr=0;_shNm=wb.SheetNames[0];
+        for(var ii2=0;ii2<Math.min(10,json.length);ii2++){if(json[ii2].some(function(c){return c!=='';})){hr=ii2;break;}}
+      }
       _xHdr=json[hr].map(function(h){return String(h).trim();});
       _xRaw=json.slice(hr+1).filter(function(row){return row.some(function(c){return c!=='';});});
-      G('up-rows').textContent=_xRaw.length+' صف';
+      G('up-rows').textContent=_xRaw.length+' صف'+(wb.SheetNames.length>1?' — شيت "'+_shNm+'"':'');
       var opts='<option value="">-- تجاهل --</option>'+_xHdr.map(function(h,i){return '<option value="'+i+'">'+(h||'عمود '+(i+1))+'</option>';}).join('');
-      for(var c=0;c<8;c++){var _e=G('mc'+c);if(_e)_e.innerHTML=opts;}
+      for(var c=0;c<9;c++){var _e=G('mc'+c);if(_e)_e.innerHTML=opts;}
       autoMapXL();G('up2').style.display='block';G('up3').style.display='none';
       showAl('up-al','✅ تم قراءة '+_xRaw.length+' صف',true);
     }catch(err){showAl('up-al','خطأ: '+err.message,false);}
@@ -2594,15 +3039,16 @@ function readXL(file){
   r.readAsBinaryString(file);
 }
 function autoMapXL(){
-  var keys=[['specification','spec','sirina'],['number','num','no','bundel','broj'],['thickness','thick','debljina'],['length','len','duzina'],['pieces','komada','qty'],['net','m3','weight'],['factory','fabrika'],['truck','kamion','عربية','عربيه']];
-  keys.forEach(function(kw,ci){var idx=_xHdr.findIndex(function(h){return kw.some(function(k){return h.toLowerCase().indexOf(k)>=0;});});if(idx>=0)G('mc'+ci).value=idx;});
+  var m=_xlMap(_xHdr);
+  m.forEach(function(idx,ci){var el=G('mc'+ci);if(el&&idx>=0)el.value=idx;});
 }
 function previewXL(){
   var gc=function(i){var v=G('mc'+i).value;return v===''?null:parseInt(v);};
-  var cols=[gc(0),gc(1),gc(2),gc(3),gc(4),gc(5),gc(6),gc(7)];
+  var cols=[gc(0),gc(1),gc(2),gc(3),gc(4),gc(5),gc(6),gc(7),gc(8)];
   if(cols[1]===null||cols[4]===null)return showAl('up-al','يرجى تحديد number و pieces',false);
   var get=function(row,c){return c!==null&&c<row.length?row[c]:'';};
-  var parsed=_xRaw.map(function(row){return {spec:String(get(row,cols[0])||'abc').trim(),num:String(get(row,cols[1])||'').trim(),thick:parseFloat(get(row,cols[2]))||38,len:String(get(row,cols[3])||'').trim(),pcs:parseInt(get(row,cols[4]))||0,net:parseFloat(String(get(row,cols[5])||'0').replace(',','.'))||0,factory:String(get(row,cols[6])||'').trim(),truck:String(get(row,cols[7])||'').trim()};}).filter(function(r){return r.num&&r.pcs>0;});
+  var _totSkip=0;
+  var parsed=_xRaw.filter(function(row){if(_xlIsTotalRow(row)){_totSkip++;return false;}return true;}).map(function(row){return {spec:String(get(row,cols[0])||'abc').trim(),num:String(get(row,cols[1])||'').trim(),thick:parseFloat(get(row,cols[2]))||38,len:String(get(row,cols[3])||'').trim(),pcs:parseInt(get(row,cols[4]))||0,net:parseFloat(String(get(row,cols[5])||'0').replace(',','.'))||0,factory:String(get(row,cols[6])||'').trim(),truck:String(get(row,cols[7])||'').trim(),ftruck:String(get(row,cols[8])||'').trim()};}).filter(function(r){return r.num&&r.pcs>0;});
   // تحذير: صفوف بتكعيب صفر أو سالب (بتلخبط الحسابات)
   var _badNet=parsed.filter(function(r){return !(r.net>0);});
   if(_badNet.length){
@@ -2610,6 +3056,7 @@ function previewXL(){
     showAl('up-al','⚠️ تنبيه: '+_badNet.length+' رابطة تكعيبها صفر أو ناقص ('+_nums+(_badNet.length>5?' وغيرها':'')+') — اتأكد من عمود m3 في الملف. هتتسجل لكن هتحتاج تصحيح بزر ✏️ م³.',false);
   }
   if(!parsed.length)return showAl('up-al','لا توجد بيانات صالحة',false);
+  if(_totSkip&&!_badNet.length)showAl('up-al','ℹ️ اتجاهل '+_totSkip+' صف مجموع (Total) — مش ربط',true);
   window._xParsed=parsed;
   G('up-cnt').textContent=parsed.length+' صف';
   G('up-tp').textContent=fmt(parsed.reduce(function(s,r){return s+r.pcs;},0));
@@ -2630,7 +3077,7 @@ function importXL(){
   var tp=lines.reduce(function(s,l){return s+l.pcs;},0),tn=lines.reduce(function(s,l){return s+l.net;},0);
   var _isTransit=(G('up-transit')||{checked:false}).checked?1:0;
   var ship={id:'sh'+Date.now(),dt:dt,ref:ref,sup:sup?sup.nm:'غير محدد',lines:lines,tp:tp,tn:tn,transit:_isTransit,mt:new Date().toISOString()};
-  lines.forEach(function(l){db.inv.push({id:'i'+Date.now()+Math.random(),shId:ship.id,shRef:ref,spec:l.spec,num:l.num,thick:l.thick,len:l.len,_orig:1,pcs:l.pcs,net:l.net,avail:1,st:'av',factory:l.factory||'',truck:l.truck||''});});
+  lines.forEach(function(l){db.inv.push({id:'i'+Date.now()+Math.random(),shId:ship.id,shRef:ref,spec:l.spec,num:l.num,thick:l.thick,len:l.len,_orig:1,pcs:l.pcs,net:l.net,avail:1,st:'av',factory:l.factory||'',truck:l.truck||'',ftruck:l.ftruck||''});});
   db.ships.push(ship);markInvDirty();recalcInv();dbSave();
   showAl('up-al2',(_isTransit?'🚚 تم تسجيل "'+ref+'" كشحنة في الطريق — مش هتظهر في المخزون لحد ما تضغط "وصلت"':'✅ تم استيراد "'+ref+'" - '+fmt(tp)+' قطعة'),true);
   if(G('up-transit'))G('up-transit').checked=false;
@@ -2873,6 +3320,7 @@ function stockAuditClose(idx,invId){
   p.lineRef.invId=inv.id;
   p.lineRef.settled=1;
   p.lineRef.auditDiff=Math.round(diff*1000)/1000;
+  var _sAu=db.sales.find(function(x){return x.id===p.saleId;});if(_sAu)_sAu.mt=new Date().toISOString();
   _logRecut(inv,inv.net,(p.net||0),'audit',p.saleId); // القديم=تكعيب المخزون، الجديد=المُباع فعلاً
   inv.avail=0;inv.mt=new Date().toISOString();
   markInvDirty();recalcInv();dbSave();
@@ -2885,6 +3333,7 @@ function stockAuditForce(idx){
   var pend=pendingNoNum();var p=pend[idx];if(!p)return;
   if(!confirm('تسوية يدوية: الرابطة دي هتتشال من قايمة الجرد من غير ما تقفل صف معين.\n\n(استخدمها لو الصف اتقفل قبل كده أو مش موجود). البيعة تفضل مسجلة زي ما هي.'))return;
   p.lineRef.settled=1;p.lineRef.forceSettled=1;
+  var _sAf=db.sales.find(function(x){return x.id===p.saleId;});if(_sAf)_sAf.mt=new Date().toISOString();
   dbSave();
   try{auditLog('جرد: تسوية يدوية',p.spec+' — عميل '+(p.cnm||'نقدي'));}catch(e){}
   dashRender();invRender();stockAuditOpen();
@@ -2908,6 +3357,7 @@ function invRender(){
   var _fpl=(G('inv-f-pl')||{value:''}).value;
   var _ffc=(G('inv-f-factory')||{value:''}).value;
   var _ftr=(G('inv-f-truck')||{value:''}).value;
+  var _fft=((G('inv-f-ftruck')||{value:''}).value||'').trim().toLowerCase();
   // 🔗 فلاتر مترابطة: كل قايمة بتتبني من المتاح بعد باقي الفلاتر (من غير فلتر نفسها)
   var _poolCache={};
   function _pool(skip){
@@ -2920,6 +3370,7 @@ function invRender(){
       if(skip!=='pl'&&_fpl&&i.shRef!==_fpl)return false;
       if(skip!=='fac'&&_ffc&&(i.factory||'')!==_ffc)return false;
       if(skip!=='truck'&&_ftr&&String(i.truck||'')!==_ftr)return false;
+      if(_fft&&String(i.ftruck||'').toLowerCase().indexOf(_fft)<0)return false;
       return true;
     });
   }
@@ -2985,6 +3436,7 @@ function invRender(){
     if(fpl&&i.shRef!==fpl)return false;
     if(ffact&&(i.factory||'')!==ffact)return false;
     if(ftruck&&String(i.truck||'')!==ftruck)return false;
+    if(_fft&&String(i.ftruck||'').toLowerCase().indexOf(_fft)<0)return false;
     return true;
   });
   var b=G('inv-b');
@@ -2997,8 +3449,9 @@ function invRender(){
       '<td><strong style="color:var(--gr)">'+fmt(item.avail)+'</strong></td><td>'+item.net.toFixed(3)+'</td>'+
       (isAdmin()?'<td style="font-size:0.7rem;color:#666">'+(item.factory?esc(item.factory):'—')+'</td>':'')+
       '<td style="font-size:0.72rem"><span style="background:#eef4fb;color:#2c5d8a;padding:2px 7px;border-radius:5px;font-weight:700">'+(item.truck?esc(String(item.truck)):'—')+'</span></td>'+
+      '<td style="font-size:0.72rem"><span style="background:#fdf2e3;color:#8a5a14;padding:2px 7px;border-radius:5px;font-weight:700">'+(item.ftruck?esc(String(item.ftruck)):'—')+'</span></td>'+
       '<td><span class="bx bxb" style="font-size:0.65rem">'+esc(item.shRef)+'</span>'+((isAdmin()&&supNm)?'<div style="font-size:0.6rem;color:#888;margin-top:2px">'+esc(supNm)+'</div>':'')+'</td></tr>';
-  }).join(''):'<tr><td colspan="10" style="color:#aaa;padding:16px;text-align:center">لا توجد نتائج</td></tr>';
+  }).join(''):'<tr><td colspan="11" style="color:#aaa;padding:16px;text-align:center">لا توجد نتائج</td></tr>';
   G('inv-tp').textContent=fmt(filtered.reduce(function(s,i){return s+(i.pcs||0);},0));
   G('inv-tn').textContent=filtered.reduce(function(s,i){return s+(i.net||0);},0).toFixed(3);
 }
@@ -3226,8 +3679,7 @@ function shDel(id){if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒
     if(rel&&s.cid){
       var cu=db.custs.find(function(c){return c.id===s.cid;});
       if(cu){
-        trackDelete('px'+s.id);
-        cu.payments=(cu.payments||[]).filter(function(p){return p.id!=='px'+s.id;});
+        _rmSalePays(cu,s.id);
         cu.total=Math.max(0,(cu.total||0)-(s.price||0));
         cu.debt=cuCalcDebt(cu);
       }
@@ -3332,6 +3784,7 @@ function saleInit(){
   var t=todayLocal();G('sl-date').value=t;
   var disc=G('sl-discount');if(disc)disc.value='';
   _sl=[];slRender();slHistRender();slFillBulkFilters();
+  try{if(G('sl-res')&&G('sl-res').innerHTML)slSearch(G('sl-srch').value);}catch(e){}
 }
 function slCustSearch(q){
   var drop=G('sl-cust-drop');if(!drop)return;
@@ -3405,6 +3858,9 @@ function slSearch(q){
   var fLen=(G('sl-f-len')||{value:''}).value;
   var fPcs=(G('sl-f-pcs')||{value:''}).value;
   var selectedIds=(_sl||[]).map(function(l){return l.invId;});
+  // 🔢 بحث بكذا رقم مرة واحدة: افصل بمسافة أو فاصلة
+  var _qToks=String(q||'').toLowerCase().split(/[\s,،;]+/).filter(Boolean);
+  window._slLastRes=[];
   var av=avAll.filter(function(i){
     if(selectedIds.indexOf(i.id)>=0)return false;
     if(fSpec&&i.spec!==fSpec)return false;
@@ -3412,13 +3868,14 @@ function slSearch(q){
     if(fShip&&i.shRef!==fShip)return false;
     if(fLen&&String(i.len)!==fLen)return false;
     if(fPcs&&String(i.pcs)!==fPcs)return false;
-    if(q&&q.trim()&&String(i.num).toLowerCase().indexOf(q.toLowerCase().trim())<0)return false;
+    if(_qToks.length&&!_qToks.some(function(t){return String(i.num).toLowerCase().indexOf(t)>=0;}))return false;
     return true;
   });
+  window._slLastRes=av.map(function(i){return i.id;});
   if(!q&&!fSpec&&!fThick&&!fShip&&!fLen&&!fPcs){res.innerHTML='';return;}
   // 🔀 بحث ذكي: أرقام نفس الخانات بترتيب مختلف (للأرقام المتبدّلة زي 457553/457535)
   var similarHTML='';
-  if(q&&q.trim()&&q.trim().replace(/\D/g,'').length>=3){
+  if(_qToks.length===1&&q.trim().replace(/\D/g,'').length>=3){
     var qClean=q.trim().replace(/\D/g,'');
     var qSorted=qClean.split('').sort().join('');
     // (أ) نفس الخانات بترتيب مختلف  (ب) خانة واحدة مختلفة (516420 vs 515420)
@@ -3444,7 +3901,11 @@ function slSearch(q){
     }
   }
   if(!av.length){res.innerHTML=(similarHTML?'<p style="color:#aaa;font-size:0.78rem;padding:5px;margin:0">مفيش رابطة بالرقم ده بالظبط — بس في أرقام شبيهة تحت 👇</p>'+similarHTML:'<p style="color:#aaa;font-size:0.8rem;padding:5px">لا نتائج</p>');return;}
-  res.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr style="background:var(--pale)">'+
+  var _avM3=av.reduce(function(s2,x){return s2+(x.net||0);},0);
+  res.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
+    +'<span style="font-size:0.76rem;color:#666">'+av.length+' رابطة | '+_avM3.toFixed(3)+' م³'+(_qToks.length>1?' — بحث بـ '+_qToks.length+' أرقام':'')+'</span>'
+    +'<button class="btn bg_ bs" onclick="slAddAllRes()" style="white-space:nowrap">➕ أضف كل النتائج ('+av.length+' رابطة)</button></div>'+
+    '<table style="width:100%;border-collapse:collapse;font-size:0.78rem"><thead><tr style="background:var(--pale)">'+
     '<th style="padding:6px">number</th><th style="padding:6px">spec</th><th style="padding:6px">mm</th><th style="padding:6px">length</th><th style="padding:6px">ألواح</th><th style="padding:6px">م³</th><th></th></tr></thead><tbody>'+
     av.map(function(inv){return '<tr style="border-bottom:1px solid #f0ebe2">'+
       '<td style="padding:6px;text-align:center"><strong>'+inv.num+'</strong></td>'+
@@ -3480,6 +3941,7 @@ function _logRecut(inv,oldNet,newNet,src,saleId){
     spec:inv.spec||'',
     factory:inv.factory||'',
     truck:String(inv.truck||''),
+    ftruck:String(inv.ftruck||''),
     shRef:inv.shRef||'',
     shDt:(function(){var sh=(db.ships||[]).find(function(x){return x.id===inv.shId;});return sh?(sh.dt||''):'';})(),
     thick:inv.thick||38,
@@ -3612,7 +4074,56 @@ function slFixNet(invId){
 function slAddFromSearch(invId){
   var ex=_sl.find(function(l){return l.invId===invId;});
   if(ex)ex.qty+=1;else _sl.push({invId:invId,qty:1,price:0});
-  slRender();G('sl-srch').value='';G('sl-res').innerHTML='';
+  slRender();
+  // الفلاتر ونتايجها تفضل — الرابطة المضافة بس هي اللي تختفي من القايمة
+  var se=G('sl-srch');
+  if(se){var _tk=String(se.value||'').split(/[\s,،;]+/).filter(Boolean);if(_tk.length<=1)se.value='';}
+  slSearch(se?se.value:'');
+}
+function slAddAllRes(){
+  var ids=(window._slLastRes||[]).slice();
+  if(!ids.length)return;
+  var added=0;
+  ids.forEach(function(id){if(!_sl.some(function(l){return l.invId===id;})){_sl.push({invId:id,qty:1,price:0});added++;}});
+  slRender();
+  slSearch(G('sl-srch')?G('sl-srch').value:'');
+  showAl('sl-al','✅ تمت إضافة '+added+' رابطة',true);
+}
+// 💰 سعر لكل درجة
+function _slSpecOf(l){
+  if(l.noNum)return String(l.spec||'').trim();
+  var inv=_invMap()[l.invId];return inv?String(inv.spec||'').trim():'';
+}
+function slSpecPxRender(){
+  var box=G('sl-spec-px');if(!box)return;
+  var grp={},order=[];
+  _sl.forEach(function(l){
+    if(!l.invId&&!l.noNum)return;
+    var sp=_slSpecOf(l);if(!sp)return;
+    var k=sp.toLowerCase();
+    if(!grp[k]){grp[k]={nm:sp,cnt:0,m3:0,prices:{}};order.push(k);}
+    var inv=l.noNum?null:_invMap()[l.invId];
+    grp[k].cnt++;grp[k].m3+=l.noNum?(l.net||0):(inv?inv.net:0);
+    grp[k].prices[String(l.price||0)]=1;
+  });
+  window._slSpecKeys=order;
+  if(!order.length){box.innerHTML='';box.style.display='none';return;}
+  box.style.display='block';
+  box.innerHTML='<div style="font-weight:700;font-size:0.85rem;color:var(--dk);margin-bottom:8px">💰 سعر لكل درجة <span style="font-weight:400;font-size:0.7rem;color:#999">— اكتب السعر قصاد الدرجة يتطبّق على كل ربطها</span></div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:0.8rem"><thead><tr style="background:var(--pale)"><th style="padding:6px">الدرجة</th><th style="padding:6px">الربط</th><th style="padding:6px">م³</th><th style="padding:6px">السعر ج/م³</th></tr></thead><tbody>'
+    +order.map(function(k,ix){
+      var g=grp[k],pk=Object.keys(g.prices),one=pk.length===1&&parseFloat(pk[0])>0?pk[0]:'';
+      return '<tr style="border-bottom:1px solid #f0ebe2"><td style="padding:6px;text-align:center"><span class="bx bxo">'+esc(g.nm.toUpperCase())+'</span></td>'
+        +'<td style="padding:6px;text-align:center">'+g.cnt+'</td><td style="padding:6px;text-align:center">'+g.m3.toFixed(3)+'</td>'
+        +'<td style="padding:6px"><input type="text" inputmode="decimal" value="'+one+'" placeholder="'+(pk.length>1?'أسعار مختلفة':'اكتب السعر')+'" oninput="slSetSpecPrice('+ix+',this.value)" style="width:100%;padding:6px 8px;border:2px solid var(--ac);border-radius:8px;font-family:Cairo,sans-serif;font-size:0.85rem"></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function slSetSpecPrice(ix,val){
+  var k=(window._slSpecKeys||[])[ix];if(k===undefined)return;
+  var p=parseFloat(String(val).replace(',','.'))||0;
+  if(!p)return;
+  _sl.forEach(function(l){if((l.invId||l.noNum)&&_slSpecOf(l).toLowerCase()===k)l.price=p;});
+  slRender(true); // من غير ما نعيد رسم مربع الدرجات (عشان الكتابة متتقطعش)
 }
 function slAddLine(){_sl.push({invId:'',qty:1,price:0});slRender();}
 function slAddNoNum(){
@@ -3666,8 +4177,9 @@ function slAddNoNumSave(){
   showAl('sl-al','🏷️ اتضافت رابطة "'+spec+'" ('+net.toFixed(3)+' م³) — هتقلّل الإجمالي وتستنى الجرد',true);
 }
 
-function slRender(){
+function slRender(_skipSpec){
   recalcInv();
+  if(!_skipSpec)try{slSpecPxRender();}catch(e){}
   var av=db.inv.filter(function(i){return i.avail>0;});
   var con=G('sl-lines');
   if(!_sl.length){con.innerHTML='<p style="color:#aaa;font-size:0.8rem;text-align:center;padding:10px">ابحث أو اضغط إضافة يدوي</p>';slTotals();return;}
@@ -3683,7 +4195,7 @@ function slRender(){
             ?'<strong>#'+esc(String(inv.num))+'</strong>&nbsp;|&nbsp;<span class="bx bxo">'+esc(inv.spec)+'</span>&nbsp;|&nbsp;'+(inv.thick||38)+'mm&nbsp;|&nbsp;'+esc(inv.len)+'&nbsp;|&nbsp;'+fmt(inv.pcs||0)+' لوح&nbsp;|&nbsp;<strong style="color:var(--ac)">'+inv.net.toFixed(3)+' م³</strong>'
             :'<span style="color:#aaa;font-size:0.8rem">ابحث برقم الرابطة فوق واضغط + إضافة</span>'))+
         '</div>'+
-        '<button class="btn bd bs" onclick="_sl.splice('+i+',1);slRender()">&#x2715;</button>'+
+        '<button class="btn bd bs" onclick="_sl.splice('+i+',1);slRender();if(G(\'sl-res\').innerHTML)slSearch(G(\'sl-srch\').value)">&#x2715;</button>'+
       '</div>'+
       '<div class="slgrid">'+
         '<div class="slcell" style="border:2px solid var(--gr)"><div class="sllbl" style="color:var(--gr);font-weight:700">⚖️ تكعيب م³</div><div class="slval">'+m3.toFixed(3)+'</div></div>'+
@@ -3723,6 +4235,12 @@ function slTotals(){
   G('sl-grand').textContent=grandFinal>0?(fmt(grandFinal)+' ج'):'0 ج';
 }
 async function slSave(){
+  // 🛡️ منع الحفظ مرتين لو الزرار اتداس مرتين ورا بعض والنت بطيء
+  if(window._slSaving)return;
+  window._slSaving=true;
+  try{return await _slSaveImpl();}finally{window._slSaving=false;}
+}
+async function _slSaveImpl(){
   invalidateReminders();
   recalcInv();
   var vl=_sl.filter(function(l){return (l.invId||l.noNum)&&l.qty>0;});
@@ -3782,7 +4300,7 @@ async function slSave(){
       cu.total=(cu.total||0)+fp;
       if(pay!=='آجل'){
         var _pf=applyPayFee(fp,pay);
-        if(!_payWasDeleted('px'+saleId))cu.payments.push({id:'px'+saleId,dt:dt,amt:_pf.net,type:'pay',method:pay,note:pay+(_pf.fee>0?(' (بعد عمولة '+_pf.pct+'% = '+fmt(_pf.fee)+' ج)'):'')});
+        if(!_payWasDeleted('px'+saleId))cu.payments.push({id:'px'+saleId,sx:saleId,dt:dt,amt:_pf.net,type:'pay',method:pay,note:pay+(_pf.fee>0?(' (بعد عمولة '+_pf.pct+'% = '+fmt(_pf.fee)+' ج)'):'')});
       }
       cu.debt=cuCalcDebt(cu);
     }
@@ -3791,7 +4309,13 @@ async function slSave(){
   // تسجيل في اليومية لو مش آجل ومش شيك (الشيك بيتسجل لما يتحصل)
   if(pay!=='آجل'&&pay!=='شيك'){
     var _pfL=applyPayFee(fp,pay);
-    cbAutoLog(_pfL.net,pay,'بيعة: '+custNm+(_pfL.fee>0?(' (خصم عمولة '+_pfL.pct+'%)'):''),dt,false,saleId);
+    var _cbIdS=cbAutoLog(_pfL.net,pay,'بيعة: '+custNm+(_pfL.fee>0?(' (خصم عمولة '+_pfL.pct+'%)'):''),dt,false,saleId);
+  }
+  // 🔗 البيعة بتشاور على دفعتها وحركة الخزنة بتاعتها (عشان لو اتكرروا من جهازين يفضل الصح بس)
+  var _sNew=db.sales.find(function(x){return x.id===saleId;});
+  if(_sNew){
+    _sNew.cbId=_cbIdS||'';
+    _sNew.pxId=(custId&&pay!=='آجل')?('px'+saleId):'';
   }
   // تسجيل شيك لو طريقة الدفع شيك
   if(pay==='شيك'){
@@ -4052,13 +4576,13 @@ function slHistRender(){
     // كل رابطة في سطر
     var lineItems=[];
     (s.lines||[]).forEach(function(l){
-      var inv=_imH[l.invId];
+      var inv=l.noNum?_lineData(l):_imH[l.invId];
       if(!inv)return;
       lineItems.push({spec:inv.spec,thick:inv.thick||38,num:inv.num,len:inv.len,pcs:inv.pcs||0,net:inv.net,price:l.price||0});
     });
     var lines=lineItems.map(function(it){
       return '<div style="font-size:0.68rem;padding:1px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#555">'
-        +'<b>'+it.spec.toUpperCase()+'</b> #'+it.num
+        +'<b>'+String(it.spec||'').toUpperCase()+'</b> '+(it.num==='🏷️'?'🏷️':'#'+esc(String(it.num)))
         +' '+it.thick+'mm '+it.len
         +' '+fmt(it.pcs)+'ق '+it.net.toFixed(2)+'م³'
         +'</div>';
@@ -4141,7 +4665,7 @@ function seSearchLine(q){
   if(!q||!q.trim()){res.innerHTML="";return;}
   recalcInv();
   var s=db.sales.find(function(x){return x.id===_seId;});
-  var used=(s?s.lines||[]:[]).map(function(l){return l.invId;});
+  var used=((_seDraft&&_seDraft.saleId===_seId)?_seDraft.lines:(s?s.lines||[]:[])).map(function(l){return l.invId;});
   var av=db.inv.filter(function(i){
     return i.avail>0&&used.indexOf(i.id)<0&&String(i.num).toLowerCase().indexOf(q.toLowerCase().trim())>=0;
   });
@@ -4153,19 +4677,21 @@ function seSearchLine(q){
   }).join("");
 }
 function seAddLine(invId){
-  var s=db.sales.find(function(x){return x.id===_seId;});if(!s)return;
-  if(s.lines.find(function(l){return l.invId===invId;}))return showAl("se-al","موجودة",false);
-  s.lines.push({invId:invId,qty:1,price:0});
+  if(!_seDraft)return;
+  _seSyncPrices();
+  if(_seDraft.lines.find(function(l){return l.invId===invId;}))return showAl("se-al","موجودة",false);
+  _seDraft.lines.push({invId:invId,qty:1,price:0});
   if(G("se-add-wrap"))G("se-add-wrap").style.display="none";
   if(G("se-add-srch"))G("se-add-srch").value="";
   if(G("se-add-res"))G("se-add-res").innerHTML="";
-  saleEditOpen(_seId);
+  seRenderLines();
 }
 function seRemoveLine(idx){
-  var s=db.sales.find(function(x){return x.id===_seId;});if(!s)return;
-  if(s.lines.length<=1)return showAl('se-al','لازم يضل رابطة واحدة على الأقل',false);
-  s.lines.splice(idx,1);
-  saleEditOpen(_seId);
+  if(!_seDraft)return;
+  _seSyncPrices();
+  if(_seDraft.lines.length<=1)return showAl('se-al','لازم يضل رابطة واحدة على الأقل',false);
+  _seDraft.lines.splice(idx,1);
+  seRenderLines();
 }
 function seCustSearch(q){
   var drop=G('se-cust-drop');if(!drop)return;
@@ -4205,42 +4731,57 @@ function saleEditOpen(saleId){
   G('se-date').value=s.dt||'';
   G('se-pay').value=s.pay||'كاش';
   G('se-note').value=s.note||'';
-  // بناء سطور الأسعار
+  // ✏️ مسودة: التعديل بيتم على نسخة — مفيش أي تغيير بيتسجل في البيعة غير لما تدوس "حفظ"
+  _seDraft={saleId:saleId,lines:JSON.parse(JSON.stringify(s.lines||[]))};
+  // الخصم الأصلي بتاع البيعة (قبل كده التعديل كان بيشيل الخصم من غير ما تاخد بالك)
+  var sDisc=G('se-discount'),sDt=G('se-disc-type');
+  var _dType=s.discType||'amt',_dVal=parseFloat(s.discVal)>0?s.discVal:'';
+  if(_dVal===''&&(s.discAmt||0)>0){_dVal=s.discAmt;_dType='amt';}
+  if(sDt)sDt.value=_dType;if(sDisc)sDisc.value=_dVal;
+  if(G('se-bulk-price'))G('se-bulk-price').value='';
+  seRenderLines();
+  G('sale-edit-modal').style.display='flex';
+  document.body.style.overflow='hidden';
+}
+var _seDraft=null;
+// سطور شاشة التعديل (من المسودة)
+function seRenderLines(){
+  if(!_seDraft)return;
   var html='';
-  (s.lines||[]).forEach(function(l,i){
+  _seDraft.lines.forEach(function(l,i){
     var inv=_invMap()[l.invId];
-    var _d=l.noNum?{num:'🏷️',spec:l.spec,thick:l.thick||38,pcs:l.pcs||0,net:l.net||0}:(inv?{num:'#'+inv.num,spec:inv.spec,thick:inv.thick||38,pcs:inv.pcs||0,net:inv.net}:null);
+    var _d=l.noNum?{num:'🏷️',spec:l.spec,thick:l.thick||38,pcs:l.pcs||0,net:l.net||0}:(inv?{num:'#'+esc(String(inv.num)),spec:inv.spec,thick:inv.thick||38,pcs:inv.pcs||0,net:inv.net}:null);
     if(!_d)return;
     html+='<div id="se-row-'+i+'" style="display:flex;align-items:center;gap:8px;padding:7px;background:#f9f5f0;border-radius:8px;margin-bottom:6px">'+
-      '<div style="flex:1;font-size:0.78rem"><strong>'+_d.num+'</strong> '+_d.spec+' '+_d.thick+'mm | '+fmt(_d.pcs)+' لوح | '+_d.net.toFixed(3)+' م³</div>'+
+      '<div style="flex:1;font-size:0.78rem"><strong>'+_d.num+'</strong> '+esc(String(_d.spec||''))+' '+_d.thick+'mm | '+fmt(_d.pcs)+' لوح | '+(_d.net||0).toFixed(3)+' م³</div>'+
       '<div style="display:flex;align-items:center;gap:5px">'+
         '<span style="font-size:0.72rem;color:#888">ج/م³</span>'+
-        '<input type="text" id="se-p-'+i+'" value="'+(l.price||0)+'" oninput="seCalcTotal()"'+
+        '<input type="text" inputmode="decimal" id="se-p-'+i+'" value="'+(l.price||0)+'" oninput="seCalcTotal()"'+
           ' style="width:75px;padding:5px;border:2px solid var(--ac);border-radius:6px;text-align:center;font-family:Cairo,sans-serif;font-weight:700;font-size:0.85rem">'+
         '<button onclick="seRemoveLine('+i+')" style="background:#fdecea;border:1px solid #e74c3c;border-radius:6px;padding:4px 8px;font-size:0.75rem;cursor:pointer;color:#c0392b;font-family:Cairo,sans-serif">حذف</button>'+
       '</div></div>';
   });
   G('se-lines').innerHTML=html;
-  var sDisc=G('se-discount');if(sDisc)sDisc.value='';
-  var sDt=G('se-disc-type');if(sDt)sDt.value='amt';
   seCalcTotal();
-  G('sale-edit-modal').style.display='flex';
-  document.body.style.overflow='hidden';
+}
+// الأسعار المكتوبة في الخانات → المسودة (قبل أي إعادة رسم)
+function _seSyncPrices(){
+  if(!_seDraft)return;
+  _seDraft.lines.forEach(function(l,i){var el=G('se-p-'+i);if(el)l.price=parseFloat(el.value)||0;});
 }
 function seApplyBulkPrice(){
   var p=parseFloat((G("se-bulk-price")||{value:0}).value)||0;
-  if(!p)return;
-  var s=db.sales.find(function(x){return x.id===_seId;});if(!s)return;
-  (s.lines||[]).forEach(function(l,i){
+  if(!p||!_seDraft)return;
+  _seDraft.lines.forEach(function(l,i){
     var el=G("se-p-"+i);if(el)el.value=p;
     l.price=p;
   });
   seCalcTotal();
 }
 function seCalcTotal(){
-  var s=db.sales.find(function(x){return x.id===_seId;});if(!s)return;
+  if(!_seDraft)return;
   var total=0;
-  (s.lines||[]).forEach(function(l,i){
+  _seDraft.lines.forEach(function(l,i){
     var inv=_invMap()[l.invId];
     var _net=l.noNum?(l.net||0):(inv?inv.net:null);
     if(_net===null)return;
@@ -4260,46 +4801,57 @@ function seCalcTotal(){
 }
 function saleEditSave(){
   var s=db.sales.find(function(x){return x.id===_seId;});if(!s)return;
-  var _snapBefore=JSON.stringify(Object.assign({},s,{mt:null})); // صورة قبل التعديل — للمقارنة
+  var _cashRe=/^(عميل\s*)?(نقد[يى]|كاش|cash|نقدا)$/i;
+  // ── 1) اقرأ المدخلات واعمل كل الفحوصات الأول — قبل ما نغيّر أي حاجة ──
+  // (لو الحفظ اترفض برسالة، ميفضلش تعديل نص نص في الذاكرة يتحفظ مع أول حركة بعدها)
   var nm=(G('se-cust').value||'').trim();
-  // 🔧 لو الاسم اتمسح أو اتغيّر لنقدي → العميل يبقى نقدي (مش يرجع للقديم)
   var _cidField=(G('se-cust-id')||{value:''}).value;
-  var _nmRaw=(G('se-cust').value||'').trim();
+  var _nmRaw=nm;
   var newCid=_cidField;
   if(!_cidField){
     // مفيش عميل مختار: لو الاسم فاضي أو "نقدي" → بيعة نقدية
-    if(!_nmRaw||/^(عميل\s*)?(نقد[يى]|كاش|cash|نقدا)$/i.test(_nmRaw))newCid='';
+    if(!_nmRaw||_cashRe.test(_nmRaw))newCid='';
     else newCid=s.cid||''; // اسم مكتوب من غير اختيار: نسيب العميل زي ما هو
   }
   var oldCid=s.cid||'';
-  var oldPrice=s.price||0;
   var custChanged=(newCid!==oldCid);
-  // حذف أثر البيعة من العميل القديم
-  if(oldCid){
-    var oldCu=db.custs.find(function(c){return c.id===oldCid;});
-    if(oldCu){
-      try{trackDelete('px'+s.id);}catch(e){}
-      oldCu.payments=(oldCu.payments||[]).filter(function(p){return p.id!=='px'+s.id;});
-      oldCu.total=Math.max(0,(oldCu.total||0)-oldPrice);
-      oldCu.debt=cuCalcDebt(oldCu);
-    }
-  }
-  // تحديث بيانات البيعة
-  if(nm) s.cnm=nm;
-  if(custChanged){
-    s.cid=newCid;
-    var newCuObj=newCid?db.custs.find(function(c){return c.id===newCid;}):null;
-    if(newCuObj)s.cnm=newCuObj.nm;
-    else s.cnm=(_nmRaw&&!/^(عميل\s*)?(نقد[يى]|كاش|cash|نقدا)$/i.test(_nmRaw))?_nmRaw:'عميل نقدي';
-  }
-  s.dt=G('se-date').value||s.dt;
+  var newCuObj=newCid?db.custs.find(function(c){return c.id===newCid;}):null;
+  var _cnmAfter=custChanged
+    ?(newCuObj?newCuObj.nm:((_nmRaw&&!_cashRe.test(_nmRaw))?_nmRaw:'عميل نقدي'))
+    :(nm||s.cnm||'');
   var _newPay=G('se-pay').value;
   if(_newPay==='آجل'){
-    var _cE=db.custs.find(function(c){return c.id===s.cid;});
-    var _cnE=((_cE&&_cE.nm)||s.cnm||'').trim();
-    if(!s.cid)return alert('⚠️ البيع الآجل لازم يتسجل على عميل');
-    if(/^(عميل\s*)?(نقد[يى]|كاش|cash|نقدا)$/i.test(_cnE))return alert('⛔ مينفعش بيع آجل لعميل "'+_cnE+'" — العميل النقدي بيدفع فوراً.');
+    if(!newCid)return alert('⚠️ البيع الآجل لازم يتسجل على عميل');
+    var _cnE=((newCuObj&&newCuObj.nm)||_cnmAfter||'').trim();
+    if(_cashRe.test(_cnE))return alert('⛔ مينفعش بيع آجل لعميل "'+_cnE+'" — العميل النقدي بيدفع فوراً.');
   }
+  // الشيكات المرتبطة بالبيعة دي
+  var _sChq=(db.cheques||[]).filter(function(cq){return cq.saleId===s.id;});
+  var _chqPend=_sChq.find(function(cq){return cq.status==='pending';})||null;
+  var _chqCol=_sChq.find(function(cq){return cq.status==='collected';})||null;
+  var _chqBnc=_sChq.find(function(cq){return cq.status==='bounced';})||null;
+  if(_chqCol&&_newPay!=='شيك'){
+    return alert('⛔ شيك البيعة دي اتحصّل بالفعل ('+fmt(_chqCol.amt)+' ج) — مينفعش تغيّر طريقة الدفع.\n\n• لو الشيك ارتد: علّمه «مرتد» الأول.\n• لو اتسجّل شيك بالغلط: امسحه من «تقرير الشيكات» في صفحة الملخصات، وبعدين غيّر طريقة الدفع.');
+  }
+  // ── 2) التنفيذ ──
+  var _snapBefore=JSON.stringify(Object.assign({},s,{mt:null})); // صورة قبل التعديل — للمقارنة
+  // ✏️ اعتمد المسودة (الرُبط اللي اتضافت/اتشالت في الشاشة)
+  var _origInv=(s.lines||[]).map(function(l){return l.invId;}).filter(Boolean);
+  if(_seDraft&&_seDraft.saleId===s.id){_seSyncPrices();s.lines=JSON.parse(JSON.stringify(_seDraft.lines));}
+  var oldPrice=s.price||0;
+  var _oldPay=s.pay||'';
+  var _oldCuX=oldCid?db.custs.find(function(c){return c.id===oldCid;}):null;
+  var _hadPx=!!(_oldCuX&&(_oldCuX.payments||[]).some(function(p){return _isSalePay(p,s.id);}));
+  // حذف أثر البيعة من العميل القديم
+  if(_oldCuX){
+    _rmSalePays(_oldCuX,s.id);
+    _oldCuX.total=Math.max(0,(_oldCuX.total||0)-oldPrice);
+    _oldCuX.debt=cuCalcDebt(_oldCuX);
+  }
+  // تحديث بيانات البيعة
+  if(nm)s.cnm=nm;
+  if(custChanged){s.cid=newCid;s.cnm=_cnmAfter;}
+  s.dt=G('se-date').value||s.dt;
   s.pay=_newPay;
   s.note=G('se-note').value;
   // تحديث الأسعار
@@ -4331,20 +4883,27 @@ function saleEditSave(){
     newTp+=_pcs;newTm3+=_net;
   });
   s.tp=newTp;s.tm3=newTm3;
-  // تحديث حساب العميل الجديد (s.cid دلوقتي بقا فيه العميل الجديد)
+  // دفعة البيعة الفورية على العميل (s.cid دلوقتي = العميل الجديد)
+  var _newPxId='';
   if(s.cid){
     var cu=db.custs.find(function(c){return c.id===s.cid;});
     if(cu){
       if(!cu.payments)cu.payments=[];
-      // أضف قيمة البيعة لمجموع العميل
       cu.total=(cu.total||0)+s.price;
-      // 🔧 امسح أي دفعة قديمة للبيعة دي (لو كانت كاش وبقت آجل، أو اتغيّر المبلغ)
-      if(s.pay==='آجل'){try{trackDelete('px'+s.id);}catch(e){}}
-      cu.payments=(cu.payments||[]).filter(function(p){return p.id!=='px'+s.id;});
-      // لو دفع فوري سجّل دفعة جديدة (بالعمولة لو فيه)
-      if(s.pay!=='آجل'){
+      // 🔧 امسح أي دفعة قديمة للبيعة دي
+      _rmSalePays(cu,s.id);
+      // شيك مرتد ومفيش غيره → مفيش دفعة (المبلغ على العميل لحد ما يتحل)
+      var _bncOnly=(s.pay==='شيك'&&_chqBnc&&!_chqPend&&!_chqCol);
+      // دفعة جديدة بـid جديد عشان علامة حذف القديمة ما تمسحهاش
+      // (لو الدفعة كانت ممسوحة يدوياً وطريقة الدفع ما اتغيرتش → ما نرجّعهاش)
+      if(s.pay!=='آجل'&&!_bncOnly&&(_hadPx||_oldPay!==s.pay||custChanged||!_userDelSalePay(s.id))){
         var _pfE=(typeof applyPayFee==='function')?applyPayFee(s.price,s.pay):{net:s.price,fee:0,pct:0};
-        if(!_payWasDeleted('px'+s.id))cu.payments.push({id:'px'+s.id,dt:s.dt,amt:_pfE.net,type:'pay',method:s.pay,note:s.pay+(_pfE.fee>0?(' (بعد عمولة '+_pfE.pct+'%)'):'')});
+        // الشيك المتحصّل: الدفعة = قيمة الشيك اللي دخلت فعلاً — والمرتجعات بتقلّلها
+        var _amtE=((s.pay==='شيك'&&_chqCol)?(_chqCol.amt||0):_pfE.net)-_retPayAdj(s);
+        if(_amtE>0){
+          _newPxId='px'+s.id+'~'+Date.now().toString(36);
+          cu.payments.push({id:_newPxId,sx:s.id,dt:s.dt,amt:_amtE,type:'pay',method:s.pay,note:s.pay+(_pfE.fee>0?(' (بعد عمولة '+_pfE.pct+'%)'):'')});
+        }
       }
       cu.debt=cuCalcDebt(cu);
     }
@@ -4358,31 +4917,62 @@ function saleEditSave(){
   // سجل حركة جديدة لو مش آجل ومش شيك (الشيك يتسجل في اليومية عند التحصيل)
   if(s.pay!=='آجل'&&s.pay!=='شيك'){
     var _pfC=(typeof applyPayFee==='function')?applyPayFee(s.price,s.pay):{net:s.price,fee:0,pct:0};
-    cbAutoLog(_pfC.net,s.pay,'تعديل بيعة: '+s.cnm+(_pfC.fee>0?(' (خصم عمولة '+_pfC.pct+'%)'):''),s.dt,false,s.id);
+    var _cbAmt=_pfC.net-_retNoCashAdj(s); // مرتجع اتعمل وهي آجل (من غير فلوس طالعة) بيقلّل اللي دخل
+    s.cbId=(_cbAmt>0)?(cbAutoLog(_cbAmt,s.pay,'تعديل بيعة: '+s.cnm+(_pfC.fee>0?(' (خصم عمولة '+_pfC.pct+'%)'):''),s.dt,false,s.id)||''):'';
   }
   // مزامنة سجل الشيكات مع طريقة الدفع بعد التعديل
-  var _oldChq=(db.cheques||[]).find(function(cq){return cq.saleId===s.id&&cq.status==='pending';});
-  if(s.pay!=='شيك'&&_oldChq){
-    trackDelete(_oldChq.id);trackDeleteCb(_oldChq.id);
-    db.cashbook=(db.cashbook||[]).filter(function(e){return e.ref!==_oldChq.id;});
-    db.cheques=(db.cheques||[]).filter(function(cq){return cq.id!==_oldChq.id;});
-  } else if(s.pay==='شيك'&&!_oldChq){
-    if(!db.cheques)db.cheques=[];
-    db.cheques.push({id:'chq'+Date.now()+Math.floor(Math.random()*1000),cid:s.cid,cnm:s.cnm,amt:s.price,dt:s.dt,due:s.dt,status:'pending',holder:s.cnm,note:'من تعديل بيعة',saleId:s.id,payId:'px'+s.id});
-  } else if(s.pay==='شيك'&&_oldChq){
-    if(_oldChq.amt!==s.price||_oldChq.cnm!==s.cnm||_oldChq.cid!==s.cid){
-      _oldChq.amt=s.price;_oldChq.cnm=s.cnm;_oldChq.cid=s.cid;_oldChq.mt=new Date().toISOString();
+  var _nowE=new Date().toISOString();
+  if(s.pay!=='شيك'){
+    if(_chqPend){
+      trackDelete(_chqPend.id);trackDeleteCb(_chqPend.id);
+      db.cashbook=(db.cashbook||[]).filter(function(e){return e.ref!==_chqPend.id;});
+      db.cheques=(db.cheques||[]).filter(function(cq){return cq.id!==_chqPend.id;});
     }
+    // الشيك المرتد: سجلّه يفضل زي ما هو (العميل ممكن يكون دفع بطريقة تانية)
+  }else if(_chqPend){
+    if(_newPxId&&_chqPend.payId!==_newPxId){_chqPend.payId=_newPxId;_chqPend.mt=_nowE;}
+    if(_chqPend.amt!==s.price||_chqPend.cnm!==s.cnm||_chqPend.cid!==s.cid){
+      _chqPend.amt=s.price;_chqPend.cnm=s.cnm;_chqPend.cid=s.cid;_chqPend.mt=_nowE;
+    }
+  }else if(_chqCol||_chqBnc){
+    // الشيك اتحصّل أو ارتد: مفيش شيك جديد — بس يتبع العميل لو اتغيّر
+    var _qE=_chqCol||_chqBnc;
+    if(_qE.cnm!==s.cnm||_qE.cid!==s.cid){_qE.cnm=s.cnm;_qE.cid=s.cid;_qE.mt=_nowE;}
+    if(_chqCol&&_newPxId&&_qE.payId!==_newPxId){_qE.payId=_newPxId;_qE.mt=_nowE;}
+  }else if(_oldPay!=='شيك'){
+    // طريقة الدفع اتغيّرت لشيك دلوقتي → سجّل شيك معلّق
+    if(!db.cheques)db.cheques=[];
+    db.cheques.push({id:'chq'+Date.now()+Math.floor(Math.random()*1000),cid:s.cid,cnm:s.cnm,amt:s.price,dt:s.dt,due:s.dt,status:'pending',holder:s.cnm,note:'من تعديل بيعة',saleId:s.id,payId:_newPxId||('px'+s.id)});
   }
+  // (البيعة كانت شيك والشيك اتمسح بإيدك → مش هنرجّعه لوحده)
   // المرتجعات المرتبطة تتبع بيانات العميل الجديدة
   (db.returns||[]).forEach(function(rr){if(rr.saleId===s.id){rr.cid=s.cid;rr.cnm=s.cnm;}});
+  if(s.pay==='آجل'||s.pay==='شيك')s.cbId='';
+  s.pxId=_newPxId||'';
   var _snapAfter=JSON.stringify(Object.assign({},s,{mt:null}));
   if(_snapAfter!==_snapBefore)s.mt=new Date().toISOString(); // ختم زمني — فقط لو حصل تغيير فعلي
   dbSave();
   G('sale-edit-modal').style.display='none';
   document.body.style.overflow='';
   slHistRender();
-  showAl('sl-al','✅ تم حفظ التعديل',true);
+  var _chqNote=(s.pay==='شيك'&&_chqCol&&_chqCol.amt!==s.price)
+    ?(' — ℹ️ الشيك اتحصّل بـ '+fmt(_chqCol.amt)+' ج، والفرق ('+fmt(Math.abs(s.price-_chqCol.amt))+' ج) '+(s.price>_chqCol.amt?'اتسجّل على العميل':'بقى رصيد للعميل'))
+    :'';
+  showAl('sl-al','✅ تم حفظ التعديل'+_chqNote,true);
+  _seDraft=null;
+  // 🔓/🔒 حجز الرُبط على السيرفر: اللي اتشالت تتحرر (عشان تتباع تاني)، واللي اتضافت تتحجز
+  var _newInv=(s.lines||[]).map(function(l){return l.invId;}).filter(Boolean);
+  var _remInv=_origInv.filter(function(x){return _newInv.indexOf(x)<0;});
+  var _addInv=_newInv.filter(function(x){return _origInv.indexOf(x)<0;});
+  if(_remInv.length){try{_releaseClaims(_remInv);}catch(e){}}
+  if(_addInv.length&&navigator.onLine&&typeof _claimBundles==='function'){
+    try{_claimBundles(_addInv,s.id).then(function(lost){
+      if(lost&&lost.length){
+        var _ln=lost.map(function(iid){var iv=db.inv.find(function(x){return x.id===iid;});return iv?('#'+iv.num):iid;}).join('، ');
+        alert('⚠️ انتبه: الرابطة '+_ln+' اتباعت من جهاز تاني في نفس الوقت — راجع الفاتورة دي وشيلها منها.');
+      }
+    }).catch(function(){});}catch(e){}
+  }
 }
 function saleWa(saleId){
   var s=db.sales.find(function(x){return x.id===saleId;});if(!s)return;
@@ -4484,7 +5074,7 @@ function saleDel(saleId){
   db.returns=(db.returns||[]).filter(function(r){return r.saleId!==saleId;});
   db.sales=db.sales.filter(function(x){return x.id!==saleId;});
   // تصحيح حساب العميل بعد إزالة كل أثر البيعة: شيل دفعة الكاش/الشيك المرتبطة (px) عشان الحساب ما يبقاش غلط
-  if(s.cid){var cu=db.custs.find(function(c){return c.id===s.cid;});if(cu){trackDelete('px'+saleId);cu.payments=(cu.payments||[]).filter(function(p){return p.id!=='px'+saleId;});cu.total=Math.max(0,(cu.total||0)-(s.price||0));cu.debt=cuCalcDebt(cu);}}
+  if(s.cid){var cu=db.custs.find(function(c){return c.id===s.cid;});if(cu){_rmSalePays(cu,saleId);cu.total=Math.max(0,(cu.total||0)-(s.price||0));cu.debt=cuCalcDebt(cu);}}
   _releaseClaims((s.lines||[]).map(function(l){return l.invId;}));
   recalcInv();dbSave();saleInit();dashRender();invRender();
   showAl('sl-al','✅ تم الحذف — الرابطات رجعت للمخزون',true);
@@ -4542,28 +5132,44 @@ function retSave(){
   if(totRet>=totSold)s.returned=true;
   s.mt=new Date().toISOString(); // ختم زمني — الفاتورة اتعدلت بالمرتجع
   var _retId='r'+Date.now()+Math.floor(Math.random()*1000);
-  db.returns.push({id:_retId,dt:retDt,saleId:_retSaleId,cid:s.cid,cnm:s.cnm,lines:retLines,tp:totalPcs,refund:fp,note:retNote});
-  // لو الدفع كان بشيك لسه ما اتصرفش → رجّع الشيك للعميل بدل ما تطلّع كاش من الدرج
+  var _retRec={id:_retId,dt:retDt,saleId:_retSaleId,cid:s.cid,cnm:s.cnm,lines:retLines,tp:totalPcs,refund:fp,note:retNote};
+  db.returns.push(_retRec);
+  // لو الدفع كان بشيك لسه ما اتصرفش:
+  //  • البيعة رجعت كلها → الشيك بيرجع للعميل (يتشال) ومفيش دفعة خالص
+  //  • مرتجع جزئي → الشيك يفضل زي ما هو، وقيمة المرتجع تبقى رصيد للعميل
   var _pendChq=(s.pay==='شيك')?(db.cheques||[]).find(function(c){return c.saleId===s.id&&c.status==='pending';}):null;
-  if(_pendChq){trackDelete(_pendChq.id);db.cheques=(db.cheques||[]).filter(function(c){return c.id!==_pendChq.id;});}
+  var _keepChq=!!(_pendChq&&!s.returned);
+  var _feeR=(typeof payFeePct==='function')?(payFeePct(s.pay)||0):0;
+  // قد إيه المرتجع ده بيقلّل دفعة البيعة (للآجل: لو اتحولت لدفع فوري بعدين)
+  var _payAdj=(!s.pay||s.pay==='آجل')?Math.round(fp*(1-_feeR/100)):0;
+  if(_pendChq&&s.returned){
+    _retRec.chqBack={cid:_pendChq.cid,cnm:_pendChq.cnm,amt:_pendChq.amt,dt:_pendChq.dt,due:_pendChq.due,holder:_pendChq.holder,note:_pendChq.note||''};
+    trackDelete(_pendChq.id);db.cheques=(db.cheques||[]).filter(function(c){return c.id!==_pendChq.id;});
+  }
   if(s.cid){
     var cu=db.custs.find(function(c){return c.id===s.cid;});
     if(cu){
       cu.total=Math.max(0,(cu.total||0)-fp);
       // لو البيعة كانت مدفوعة (مش آجل): قلّل/شيل الدفعة الأصلية بمقدار المرتجع عشان حساب العميل ما يبقاش بالسالب
-      if(s.pay!=='آجل'&&cu.payments){
-        var _pxp=cu.payments.find(function(p){return p.id==='px'+s.id;});
+      if(s.pay!=='آجل'&&cu.payments&&!_keepChq){
+        var _pxp=cu.payments.find(function(p){return _isSalePay(p,s.id);});
         if(_pxp){
-          // المرتجع يقلّل الدفعة بنسبة الصافي للإجمالي (عشان العمولة): لو الدفعة كانت صافية بعد عمولة، الاسترداد يقلّلها بنفس النسبة
-          var _refFactor=(s.price&&s.price>0)?(fp/s.price):0; // نسبة المرتجع للفاتورة
-          var _payReduce=Math.round((_pxp.amt||0)*_refFactor);
-          _pxp.amt=(_pxp.amt||0)-_payReduce;
-          if(_pxp.amt<=0){trackDelete('px'+s.id);cu.payments=cu.payments.filter(function(p){return p!==_pxp;});}
+          var _payReduce;
+          if(_pendChq&&s.returned)_payReduce=(_pxp.amt||0); // الشيك رجع للعميل → الدفعة كلها تتشال
+          else{
+            // المرتجع يقلّل الدفعة بنسبة الصافي للإجمالي (عشان العمولة)
+            var _refFactor=(s.price&&s.price>0)?(fp/s.price):0; // نسبة المرتجع للفاتورة
+            _payReduce=Math.round((_pxp.amt||0)*_refFactor);
+          }
+          _pxp.amt=(_pxp.amt||0)-_payReduce;_pxp.mt=new Date().toISOString();
+          _payAdj=_payReduce;
+          if(_pxp.amt<=0){trackDelete(_pxp.id);var _tR=db.deleted[db.deleted.length-1];if(_tR&&_tR.id===_pxp.id)_tR.sys=1;cu.payments=cu.payments.filter(function(p){return p!==_pxp;});}
         }
       }
       cu.debt=cuCalcDebt(cu);
     }
   }
+  _retRec.payAdj=_payAdj;
   // حركة اليومية للمرتجع — بس لو الفلوس فعلاً اتقبضت (مش آجل ومش شيك لسه معلّق)
   if(s.pay&&s.pay!=='آجل'&&fp>0&&!_pendChq){
     var rm2={'كاش':'cash','بنك تنمية الصادرات':'bank1','بنك سايب':'bank2','فودافون محمد':'voda1','فودافون إبراهيم':'voda2','فودافون طارق':'voda3','إنستا باي محمد':'insta1','إنستا باي إبراهيم':'insta2','محفظة بنك القاهرة':'wallet','شيك':'check','فودافون كاش':'voda1','إنستا باي':'insta1','تحويل بنكي':'bank1'};
@@ -4576,7 +5182,7 @@ function retSave(){
   }
   _releaseClaims(retLines.map(function(l){return l.invId;}));
   recalcInv();dbSave();G('ret-modal').style.display='none';
-  showAl('sl-al','✅ مرتجع | '+fmt(totalPcs)+' قطعة | '+fmt(fp)+' ج',true);
+  showAl('sl-al','✅ مرتجع | '+fmt(totalPcs)+' قطعة | '+fmt(fp)+' ج'+(_keepChq?' — ℹ️ الشيك فاضل زي ما هو، وقيمة المرتجع بقت رصيد للعميل':''),true);
   saleInit();dashRender();invRender();
 }
 
@@ -4606,7 +5212,7 @@ function cuAdd(){
 function chqDueTag(p,cid){
   // يرجّع نص صغير باستحقاق الشيك لو الدفعة دي شيك — للكشف على الشاشة والطباعة والواتساب
   if(!p||p.method!=='شيك')return '';
-  var q=(db.cheques||[]).find(function(x){return (x.payId&&x.payId===p.id)||(x.saleId&&('px'+x.saleId)===p.id);});
+  var q=(db.cheques||[]).find(function(x){return (x.payId&&x.payId===p.id)||(x.saleId&&_isSalePay(p,x.saleId));});
   if(!q)q=(db.cheques||[]).find(function(x){return x.cid===cid&&x.amt===p.amt&&x.dt===p.dt;});
   if(!q)return '';
   if(q.status==='pending'){
@@ -4617,7 +5223,7 @@ function chqDueTag(p,cid){
 function cuRender(){
   checkReminders();
   var s1=db.custs.length;
-  var s2=db.custs.reduce(function(s,c){return s+(c.total||0);},0);
+  var s2=db.custs.reduce(function(s,c){return s+(c.total||0);},0)-(db.returns||[]).reduce(function(t,r){return t+((r&&r.cid)?(r.refund||0):0);},0);
   var _sByC={},_rByC={};
   db.sales.forEach(function(s){if(s.cid)_sByC[s.cid]=(_sByC[s.cid]||0)+(s.price||0);});
   (db.returns||[]).forEach(function(r){if(r.cid)_rByC[r.cid]=(_rByC[r.cid]||0)+(r.refund||0);});
@@ -4748,16 +5354,16 @@ function cuFilterAlpha(l){var s=G('cu-search');if(s){s.value=l;}cuRender();}
 function _saleDetHTML(ref){
   var det='';
   (ref.lines||[]).forEach(function(l){
-    var inv=_invMap()[l.invId];
+    var inv=_lineData(l);
     if(!inv)return;
     det+='<div style="font-size:0.7rem;background:rgba(192,57,43,0.05);border-radius:5px;padding:3px 7px;margin-top:2px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">'+
       '<span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:0.62rem;font-weight:700;background:#fef3e2;color:#d4812a">'+esc(inv.spec)+'</span>'+
-      '<b>#'+inv.num+'</b> | '+(inv.thick||38)+'mm | '+inv.len+' | <b>'+fmt(inv.pcs||0)+'</b> ق | <b style="color:#d4812a">'+inv.net.toFixed(3)+'</b> م³ | '+fmt(l.price||0)+' ج/م³ | <b style="color:#2a7d4f">'+fmt(Math.round(inv.net*(l.price||0)))+' ج</b>'+
+      '<b>'+(inv.num==='🏷️'?'🏷️':'#'+esc(String(inv.num)))+'</b> | '+(inv.thick||38)+'mm | '+esc(String(inv.len))+' | <b>'+fmt(inv.pcs||0)+'</b> ق | <b style="color:#d4812a">'+inv.net.toFixed(3)+'</b> م³ | '+fmt(l.price||0)+' ج/م³ | <b style="color:#2a7d4f">'+fmt(Math.round(inv.net*(l.price||0)))+' ج</b>'+
     '</div>';
   });
   var sGroups={};
   (ref.lines||[]).forEach(function(l){
-    var inv=_invMap()[l.invId];
+    var inv=_lineData(l);
     if(!inv)return;
     var key=inv.spec+'|'+(inv.thick||38)+'|'+(l.price||0);
     if(!sGroups[key])sGroups[key]={spec:inv.spec,thick:inv.thick||38,price:l.price||0,cnt:0,m3:0,pcs:0,val:0};
@@ -5242,7 +5848,7 @@ function cuPrint(printMode,prFrom,prTo){
     var lbl=isSale?'\uD83D\uDECD \u0645\u0628\u064A\u0639\u0629':isPay?'\uD83D\uDCB5 \u062F\u0641\u0639\u0629':isCharge?'\u2795 \u0625\u0636\u0627\u0641\u0629 \u062F\u064A\u0646':isDisc?'\uD83C\uDFF7 \u062E\u0635\u0645/\u062A\u0633\u0648\u064A\u0629':'\u21A9 \u0645\u0631\u062A\u062C\u0639';
     var det='';
     if(isSale){
-      var bM3=(e.ref.lines||[]).reduce(function(s,l){var inv=_invMap()[l.invId];return s+(inv?inv.net:0);},0);
+      var bM3=(e.ref.lines||[]).reduce(function(s,l){var inv=_lineData(l);return s+(inv?inv.net:0);},0);
       det=(e.ref.lines||[]).length+' \u0631\u0627\u0628\u0637\u0629 | '+bM3.toFixed(3)+' \u0645\u00B3 | '+e.ref.pay;
     }else if(isPay){det=esc((e.ref.method||'')+(e.ref.note?' \u2014 '+e.ref.note:''))+'<b style="color:#b35a00">'+chqDueTag(e.ref,_cuId)+'</b>';}
     else if(isCharge){det=e.ref.note||e.ref.method||'إضافة للدين';}
@@ -5393,7 +5999,7 @@ function cuDelPayment(pid){
     if(pay.method==='شيك'){
       var found=false;
       db.cheques=(db.cheques||[]).filter(function(ch){
-        if(!found&&ch.cid===_cuId&&ch.amt===pay.amt&&ch.dt===pay.dt){
+        if(!found&&((ch.payId&&ch.payId===pid)||(pay.sx&&ch.saleId===pay.sx)||(!ch.payId&&ch.cid===_cuId&&ch.amt===pay.amt&&ch.dt===pay.dt))){
           // امسح حركة التحصيل من اليومية لو كان محصل + سجل علامة حذف للشيك
           trackDelete(ch.id);trackDeleteCb(ch.id);
           db.cashbook=(db.cashbook||[]).filter(function(e){return e.ref!==ch.id;});
@@ -5423,21 +6029,33 @@ function cuDelReturn(rid){
     var totSold=(sale.lines||[]).reduce(function(x,l){return x+(l.qty||0);},0);
     var totRet=(sale.retLines||[]).reduce(function(x,l){return x+(l.qty||0);},0);
     sale.returned=(totSold>0&&totRet>=totSold);
+    sale.mt=new Date().toISOString(); // ختم زمني — المرتجع اتشال من الفاتورة
   }
   // 2) رجّع دفعة البيع الأصلية (عكس اللي عمله المرتجع) لو البيعة كانت مدفوعة
   var c=db.custs.find(function(x){return x.id===_cuId;});
   if(c){
     if(sale&&sale.pay&&sale.pay!=='آجل'){
       if(!c.payments)c.payments=[];
-      var pxp=c.payments.find(function(p){return p.id==='px'+sale.id;});
-      if(pxp){pxp.amt=(pxp.amt||0)+(ret.refund||0);}
-      else{
-        // 🔧 الدفعة الأصلية اتمسحت (يدوياً أو بالمرتجع) — نعمل دفعة جديدة بـid جديد
-        // بدل ما نلغي تسجيل الحذف (اللي كان بيخلي الدفعة ترجع كل مرة تمسحها)
-        if(!_payWasDeleted('px'+sale.id)){
-          c.payments.push({id:'px'+sale.id,dt:sale.dt,amt:ret.refund||0,type:'pay',method:sale.pay,note:sale.pay});
+      var pxp=c.payments.find(function(p){return _isSalePay(p,sale.id);});
+      // المرتجعات الجديدة بتسجل قد إيه قلّلت الدفعة بالظبط (القديمة: قيمة المرتجع)
+      var _back=(ret.payAdj!==undefined)?(ret.payAdj||0):(ret.refund||0);
+      var _pidBack=pxp?pxp.id:'';
+      if(_back>0){
+        if(pxp){pxp.amt=(pxp.amt||0)+_back;pxp.mt=new Date().toISOString();}
+        else{
+          // 🔧 الدفعة الأصلية اتمسحت (يدوياً أو بالمرتجع) — نعمل دفعة جديدة بـid جديد
+          // بدل ما نلغي تسجيل الحذف (اللي كان بيخلي الدفعة ترجع كل مرة تمسحها)
+          if(!_userDelSalePay(sale.id)){
+            _pidBack='px'+sale.id+'~'+Date.now().toString(36);sale.pxId=_pidBack;sale.mt=new Date().toISOString();
+            c.payments.push({id:_pidBack,sx:sale.id,dt:sale.dt,amt:_back,type:'pay',method:sale.pay,note:sale.pay});
+          }
+          // لو المستخدم مسحها بإيده قبل كده → ما نرجّعهاش (احترام قراره)
         }
-        // لو المستخدم مسحها بإيده قبل كده → ما نرجّعهاش (احترام قراره)
+      }
+      // المرتجع كان رجّع الشيك للعميل → الشيك يرجع معلّق تاني
+      if(ret.chqBack&&sale.pay==='شيك'){
+        if(!db.cheques)db.cheques=[];
+        db.cheques.push(Object.assign({},ret.chqBack,{id:'chq'+Date.now()+Math.floor(Math.random()*1000),status:'pending',saleId:sale.id,payId:_pidBack||('px'+sale.id),mt:new Date().toISOString()}));
       }
     }
     c.total=(c.total||0)+(ret.refund||0);
@@ -5452,9 +6070,18 @@ function cuDelReturn(rid){
   db.returns=db.returns.filter(function(r){return r.id!==rid;});
   if(c)c.debt=cuCalcDebt(c);
   recalcInv();dbSave();cuOpen(_cuId);cuRender();
+  // الرابطة رجعت "مباعة" → احجزها تاني على السيرفر (عشان ماتتباعش من جهاز تاني)
+  try{
+    var _rcIds=(ret.lines||[]).map(function(l){return l.invId;}).filter(Boolean);
+    if(sale&&_rcIds.length&&navigator.onLine&&typeof _claimBundles==='function'){
+      _claimBundles(_rcIds,sale.id).then(function(lost){
+        if(lost&&lost.length)alert('⚠️ انتبه: رابطة من المرتجع ده اتباعت تاني بعد المرتجع — راجع تنبيه «رابطات اتباعت في أكتر من فاتورة» في الرئيسية.');
+      }).catch(function(){});
+    }
+  }catch(e){}
 }
 function cuDelActive(){
-  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');dbSaveUndo('حذف عميل');if(!_cuId||!confirm('حذف العميل؟'))return;trackDelete(_cuId);db.custs=db.custs.filter(function(c){return c.id!==_cuId;});dbSave();_cuId=null;cuRender();}
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');dbSaveUndo('حذف عميل');if(!_cuId)return;var _cD=db.custs.find(function(c){return c.id===_cuId;});var _nS=db.sales.filter(function(x){return x.cid===_cuId;}).length;var _bal=_cD?Math.round(cuCalcDebt(_cD)):0;var _msgD='حذف العميل'+(_cD?' "'+_cD.nm+'"':'')+'؟';if(_nS||_bal){_msgD+='\n\n⚠️ العميل ده عليه '+_nS+' فاتورة'+(_bal>0?' ومديونية '+fmt(_bal)+' ج':(_bal<0?' ورصيد ليه '+fmt(-_bal)+' ج':''))+'.\nلو حذفته: فواتيره هتفضل من غير عميل، وكشف حسابه ودفعاته هيتمسحوا.';}if(!confirm(_msgD))return;trackDelete(_cuId);db.custs=db.custs.filter(function(c){return c.id!==_cuId;});dbSave();_cuId=null;cuRender();}
 function cuPayOpen(){
   var c=db.custs.find(function(x){return x.id===_cuId;});if(!c)return;
   G('pay-debt-show').textContent=fmt(Math.round(cuCalcDebt(c)))+' ج';
@@ -5528,6 +6155,7 @@ function cuDiscountOpen(){
   G('discount-modal').style.display='flex';
 }
 function cuDiscountSave(){
+  if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الخصم والتسوية للمدير فقط');
   var c=db.custs.find(function(x){return x.id===_cuId;});if(!c)return;
   var amt=parseFloat(G('disc-amt').value)||0;
   if(amt<=0)return showAl('disc-al','يرجى إدخال مبلغ صحيح',false);
@@ -6094,7 +6722,7 @@ function recutReport(){
       +'<div style="font-size:0.72rem;color:#777;margin-top:4px">'+d.cnt+' رابطة | عجز: <b style="color:#c0392b">'+d.deficit.toFixed(3)+'</b> | زيادة: <b style="color:#1e6b3c">'+d.surplus.toFixed(3)+'</b> | صافي: <b>'+(d.totalDiff>=0?'+':'')+d.totalDiff.toFixed(3)+'</b> م³</div>'
       +'</div>'
       +'<div id="'+bid+'" style="display:none"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.74rem">'
-      +'<thead><tr style="background:#f5f0e8"><th style="padding:5px"><input type="checkbox" onclick="rcSelectAll(this,\''+bid+'\')" title="تحديد الكل" style="width:15px;height:15px;cursor:pointer"></th><th style="padding:5px">التاريخ</th><th style="padding:5px">الرقم</th><th style="padding:5px">🚚 عربية</th><th style="padding:5px">📋 الشحنة</th><th style="padding:5px">النوع</th><th style="padding:5px">الطول</th><th style="padding:5px">قديم</th><th style="padding:5px">جديد</th><th style="padding:5px">الفرق</th><th style="padding:5px">المصدر</th></tr></thead><tbody>';
+      +'<thead><tr style="background:#f5f0e8"><th style="padding:5px"><input type="checkbox" onclick="rcSelectAll(this,\''+bid+'\')" title="تحديد الكل" style="width:15px;height:15px;cursor:pointer"></th><th style="padding:5px">التاريخ</th><th style="padding:5px">الرقم</th><th style="padding:5px">🚚 الميناء / 🏭 المصنع</th><th style="padding:5px">📋 الشحنة</th><th style="padding:5px">النوع</th><th style="padding:5px">الطول</th><th style="padding:5px">قديم</th><th style="padding:5px">جديد</th><th style="padding:5px">الفرق</th><th style="padding:5px">المصدر</th></tr></thead><tbody>';
     d.items.slice().reverse().forEach(function(r){
       var dc=r.diff<-0.001?'#c0392b':(r.diff>0.001?'#1e6b3c':'#888');
       var dt2=r.diff<-0.001?('عجز '+Math.abs(r.diff).toFixed(3)):(r.diff>0.001?('+'+r.diff.toFixed(3)):'مطابق');
@@ -6102,7 +6730,7 @@ function recutReport(){
         +'<td style="padding:5px;text-align:center"><input type="checkbox" class="rc-chk rc-chk-'+bid+'" value="'+escAttr(r.id||'')+'" onclick="rcUpdateSelCount()" style="width:15px;height:15px;cursor:pointer"></td>'
         +'<td style="padding:5px;text-align:center;color:#999;white-space:nowrap">'+r.dt+'</td>'
         +'<td style="padding:5px;text-align:center"><b>'+(r.num==='🏷️'?'🏷️':'#'+esc(r.num))+'</b></td>'
-        +'<td style="padding:5px;text-align:center"><span style="background:#eef4fb;color:#2c5d8a;padding:1px 6px;border-radius:5px;font-weight:700;font-size:0.7rem">'+(r.truck?esc(String(r.truck)):'—')+'</span></td>'
+        +'<td style="padding:5px;text-align:center"><span style="background:#eef4fb;color:#2c5d8a;padding:1px 6px;border-radius:5px;font-weight:700;font-size:0.7rem">'+(r.truck?esc(String(r.truck)):'—')+'</span>'+(r.ftruck?'<div style="margin-top:2px"><span style="background:#fdf2e3;color:#8a5a14;padding:1px 6px;border-radius:5px;font-weight:700;font-size:0.7rem">🏭 '+esc(String(r.ftruck))+'</span></div>':'')+'</td>'
         +'<td style="padding:5px;text-align:center;font-size:0.7rem">'+(r.shRef?('<b>'+esc(r.shRef)+'</b>'+(r.shDt?'<div style="color:#999;font-size:0.65rem">'+esc(r.shDt)+'</div>':'')):'—')+'</td>'
         +'<td style="padding:5px;text-align:center">'+esc(r.spec)+'</td>'
         +'<td style="padding:5px;text-align:center">'+esc(String(r.len))+'</td>'
@@ -6206,7 +6834,7 @@ function recutEnglishReport(){
     h+='<h2>'+esc(f)+' &nbsp;&mdash;&nbsp; '+d.cnt+' bundles &nbsp;|&nbsp; Shortage: <span class="neg">'+d.shortage.toFixed(3)
       +'</span> m&sup3; &nbsp;|&nbsp; Surplus: <span class="pos">'+d.surplus.toFixed(3)
       +'</span> m&sup3; &nbsp;|&nbsp; Average: <span class="'+(avg<0?'neg':'pos')+'">'+(avg<0?'':'+')+avg.toFixed(3)+'</span> m&sup3;/bundle</h2>'
-      +'<table><thead><tr><th>Date</th><th>Bundle No.</th><th>Truck No.</th><th>Shipment</th><th>Shipment Date</th><th>Grade</th><th>Thickness</th><th>Length</th><th>Pcs</th><th>Original m&sup3;</th><th>Remeasured m&sup3;</th><th>Variance</th><th>Status</th></tr></thead><tbody>';
+      +'<table><thead><tr><th>Date</th><th>Bundle No.</th><th>Port Truck No.</th><th>Factory Truck No.</th><th>Shipment</th><th>Shipment Date</th><th>Grade</th><th>Thickness</th><th>Length</th><th>Pcs</th><th>Original m&sup3;</th><th>Remeasured m&sup3;</th><th>Variance</th><th>Status</th></tr></thead><tbody>';
     d.items.slice().reverse().forEach(function(r){
       var cls=r.diff<-0.001?'neg':(r.diff>0.001?'pos':'');
       var st=r.diff<-0.001?'Shortage':(r.diff>0.001?'Surplus':'Match');
@@ -6214,6 +6842,7 @@ function recutEnglishReport(){
         +'<td>'+(r.dt||'')+'</td>'
         +'<td><b>'+(r.num==='🏷️'?'N/A':esc(String(r.num)))+'</b></td>'
         +'<td>'+(r.truck?esc(String(r.truck)):'-')+'</td>'
+        +'<td>'+(r.ftruck?esc(String(r.ftruck)):'-')+'</td>'
         +'<td>'+(r.shRef?esc(r.shRef):'-')+'</td>'
         +'<td>'+(r.shDt?esc(r.shDt):'-')+'</td>'
         +'<td>'+esc(String(r.spec||'').toUpperCase())+'</td>'
@@ -6252,9 +6881,9 @@ function recutExportXL(){
   });
   if(!rows.length)return alert('مفيش بيانات للتصدير');
   try{
-    var data=[['التاريخ','المصنع','رقم العربية','رقم الرابطة','النوع','السماكة','الطول','العدد','التكعيب القديم','التكعيب الجديد','الفرق','عجز/زيادة','المصدر']];
+    var data=[['التاريخ','المصنع','عربية الميناء','عربية المصنع','رقم الرابطة','النوع','السماكة','الطول','العدد','التكعيب القديم','التكعيب الجديد','الفرق','عجز/زيادة','المصدر']];
     rows.slice().reverse().forEach(function(r){
-      data.push([r.dt||'',r.factory||'(بدون مصنع)',r.truck||'',r.num||'',r.spec||'',r.thick||'',r.len||'',r.pcs||0,
+      data.push([r.dt||'',r.factory||'(بدون مصنع)',r.truck||'',r.ftruck||'',r.num||'',r.spec||'',r.thick||'',r.len||'',r.pcs||0,
         r.oldNet||0,r.newNet||0,r.diff||0,
         (r.diff<-0.001?'عجز':(r.diff>0.001?'زيادة':'مطابق')),
         (r.src==='audit'?'جرد':'تعديل يدوي')]);
@@ -6268,26 +6897,32 @@ function recutExportXL(){
 function yearlyStatsRender(){
   var box=G('rep-yearly');if(!box)return;
   var years={};
+  // 📅 فلتر التاريخ اللي فوق في الصفحة بيطبّق هنا كمان
+  var _yF=(G('rep-from')||{}).value||'',_yT=(G('rep-to')||{}).value||'';
+  var _inR=function(dt){dt=dt||'';if(_yF&&dt<_yF)return false;if(_yT&&dt>_yT)return false;return true;};
   // المشتريات: من الشحنات الواصلة (بالمتر والقطع — الفلوس مش مسجلة وقت الشراء)
   (db.ships||[]).forEach(function(sh){
     if(sh.transit)return; // في الطريق لسه
+    if(!_inR(sh.dt))return;
     var y=(sh.dt||'').slice(0,4);if(!y)return;
     if(!years[y])years[y]={buyM3:0,buyPcs:0,buyExp:0,sellM3:0,sellPcs:0,sellVal:0};
     years[y].buyM3+=(sh.tn||0);
     years[y].buyPcs+=(sh.tp||0);
     years[y].buyExp+=shipExpenses(sh.id); // مصاريف الرسالة (شحن/جمارك)
   });
-  // المبيعات: من الفواتير
+  // المبيعات: من الفواتير — بعد خصم المرتجعات
+  var _rfY=_refundMap();
   (db.sales||[]).forEach(function(s){
+    if(!_inR(s.dt))return;
     var y=(s.dt||'').slice(0,4);if(!y)return;
     if(!years[y])years[y]={buyM3:0,buyPcs:0,buyExp:0,sellM3:0,sellPcs:0,sellVal:0};
-    years[y].sellM3+=(s.tm3||0);
-    years[y].sellPcs+=(s.tp||0);
-    years[y].sellVal+=(s.price||0);
+    _saleActiveLines(s).forEach(function(l){var d=_lineData(l);if(d){years[y].sellM3+=(d.net||0);years[y].sellPcs+=(d.pcs||0);}});
+    years[y].sellVal+=Math.max(0,(s.price||0)-(_rfY[s.id]||0));
   });
   var yrs=Object.keys(years).sort().reverse();
-  if(!yrs.length){box.innerHTML='<p style="color:#aaa;font-size:0.85rem;padding:8px">لا توجد بيانات بعد</p>';return;}
-  var h='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.82rem">'
+  var _yNote=(_yF||_yT)?'<div style="font-size:0.75rem;color:#8a5a14;background:#fdf2e3;border-radius:8px;padding:6px 10px;margin-bottom:8px">📅 الفترة: '+(_yF||'البداية')+' ← '+(_yT||'النهاردة')+'</div>':'';
+  if(!yrs.length){box.innerHTML=_yNote+'<p style="color:#aaa;font-size:0.85rem;padding:8px">لا توجد بيانات في الفترة دي</p>';return;}
+  var h=_yNote+'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:0.82rem">'
     +'<thead><tr style="background:var(--pale)">'
     +'<th style="padding:8px">السنة</th>'
     +'<th style="padding:8px;color:#1e6b3c">📥 مشتريات م³</th>'
@@ -6336,12 +6971,17 @@ function reportsRender(){
     if(to&&(s.dt||'')>to)return false;
     return true;
   });
+  // 🔁 المرتجعات بتتخصم: قيمة البيعة = السعر − المرتجع، والرُبط المرتجعة متتحسبش
+  var _rfR=_refundMap();
+  var _netV=function(s){return Math.max(0,(s.price||0)-(_rfR[s.id]||0));};
+  var _netM3=function(s){return _saleActiveLines(s).reduce(function(t,l){var d=_lineData(l);return t+(d?(d.net||0):0);},0);};
+  sales=sales.filter(function(s){return _netV(s)>0||_saleActiveLines(s).length>0;});
   // 1) أكتر العملاء شراءً
   var byCust={};
   sales.forEach(function(s){
     var k=s.cid||s.cnm||'—';
     if(!byCust[k])byCust[k]={nm:s.cnm||'—',cnt:0,m3:0,val:0};
-    byCust[k].cnt++;byCust[k].m3+=(s.tm3||0);byCust[k].val+=(s.price||0);
+    byCust[k].cnt++;byCust[k].m3+=_netM3(s);byCust[k].val+=_netV(s);
   });
   var custRows=Object.keys(byCust).map(function(k){return byCust[k];}).sort(function(a,b){return b.val-a.val;});
   var maxCustVal=custRows.length?custRows[0].val:0;
@@ -6361,7 +7001,7 @@ function reportsRender(){
   // 2+3) أكتر الأنواع والتخانات مبيعاً (من الرُبط المباعة)
   var bySpec={},byThick={};
   sales.forEach(function(s){
-    (s.lines||[]).forEach(function(l){
+    _saleActiveLines(s).forEach(function(l){
       var inv=_imR[l.invId];
       var d=l.noNum?{spec:l.spec,thick:l.thick||38,pcs:l.pcs||0,net:l.net||0}:(inv?{spec:inv.spec,thick:inv.thick||38,pcs:inv.pcs||0,net:inv.net}:null);
       if(!d)return;
@@ -6369,7 +7009,7 @@ function reportsRender(){
       if(!bySpec[sp])bySpec[sp]={cnt:0,pcs:0,m3:0,val:0};
       bySpec[sp].cnt++;bySpec[sp].pcs+=(d.pcs||0);bySpec[sp].m3+=(d.net||0);bySpec[sp].val+=val;
       if(!byThick[tk])byThick[tk]={cnt:0,pcs:0,m3:0,val:0};
-      byThick[tk].cnt++;byThick[tk].pcs+=(inv.pcs||0);byThick[tk].m3+=inv.net;byThick[tk].val+=val;
+      byThick[tk].cnt++;byThick[tk].pcs+=(d.pcs||0);byThick[tk].m3+=(d.net||0);byThick[tk].val+=val;
     });
   });
   function rankTable(obj,labelSuffix,keyLabel){
@@ -6395,7 +7035,7 @@ function reportsRender(){
   sales.forEach(function(s){
     var mk=(s.dt||'').slice(0,7);if(!mk)return;
     if(!byMonth[mk])byMonth[mk]={val:0,m3:0,cnt:0};
-    byMonth[mk].val+=(s.price||0);byMonth[mk].m3+=(s.tm3||0);byMonth[mk].cnt++;
+    byMonth[mk].val+=_netV(s);byMonth[mk].m3+=_netM3(s);byMonth[mk].cnt++;
   });
   var months=Object.keys(byMonth).sort();
   var trendEl=G('rep-trend');
@@ -6427,7 +7067,7 @@ function reportsRender(){
   // 5) مصفوفة المبيعات درجة×سماكة (من المبيعات المفلترة)
   var sm={};
   sales.forEach(function(s){
-    (s.lines||[]).forEach(function(l){
+    _saleActiveLines(s).forEach(function(l){
       var inv=_imR[l.invId];
       var d=l.noNum?{spec:l.spec,thick:l.thick||38,pcs:l.pcs||0,net:l.net||0}:(inv?{spec:inv.spec,thick:inv.thick||38,pcs:inv.pcs||0,net:inv.net}:null);
       if(!d)return;
@@ -6489,7 +7129,7 @@ function sumRenderPL(){
     var custAgelFromSh={};
     db.sales.forEach(function(s){
       var lineValFromSh=0;
-      (s.lines||[]).forEach(function(l){
+      _saleActiveLines(s).forEach(function(l){
         if(shInvSet[l.invId]){
           var inv=_imP[l.invId];
           if(!inv)return;lineValFromSh+=inv.net*(l.price||0);
@@ -6507,8 +7147,8 @@ function sumRenderPL(){
       var cu=db.custs.find(function(c){return c.id===cid;});
       if(!cu){custAgelFromSh[cid].forEach(function(x){shOwed+=x.val;});return;}
       var allAgelSales=db.sales.filter(function(s){return s.cid===cid&&s.pay==='آجل';}).sort(function(a,b){return a.dt<b.dt?-1:1;});
-      var _pxCash={};db.sales.forEach(function(sx){if(sx.cid===cid&&sx.pay!=='آجل')_pxCash['px'+sx.id]=1;});
-      var totalPaid=(cu.payments||[]).filter(function(p){return p.type==='pay'&&!_pxCash[p.id];}).reduce(function(s,p){return s+(p.amt||0);},0);
+      var _pxCash={},_sxCash={};db.sales.forEach(function(sx){if(sx.cid===cid&&sx.pay!=='آجل'){_pxCash['px'+sx.id]=1;_sxCash[sx.id]=1;}});
+      var totalPaid=(cu.payments||[]).filter(function(p){return p.type==='pay'&&!_pxCash[p.id]&&!(p.sx&&_sxCash[p.sx]);}).reduce(function(s,p){return s+(p.amt||0);},0);
       var remaining=totalPaid;var salePaid={};
       allAgelSales.forEach(function(s){if(remaining<=0){salePaid[s.id]=0;return;}var owed=s.price||0;var pay=Math.min(remaining,owed);salePaid[s.id]=pay;remaining-=pay;});
       custAgelFromSh[cid].forEach(function(x){
@@ -6650,7 +7290,10 @@ function sumRender(){
     if(st&&e.dt>st)return false;
     return true;
   });
-  var totalSales=fSales.reduce(function(s,x){return s+(x.price||0);},0);
+  // 🔁 المرتجعات بتتخصم من المبيعات
+  var _rfS=_refundMap();
+  var totalReturns=fSales.reduce(function(s,x){return s+Math.min(x.price||0,_rfS[x.id]||0);},0);
+  var totalSales=fSales.reduce(function(s,x){return s+(x.price||0);},0)-totalReturns;
   // خصم التسويات من إجمالي المبيعات
   var totalDiscounts=0;
   db.custs.forEach(function(c){
@@ -6680,7 +7323,7 @@ function sumRender(){
   var totalDebt=db.custs.reduce(function(s,c){return s+Math.max(0,cuCalcDebt(c));},0);
   var netSales=totalSales-totalDiscounts;
   var profit=netSales-totalExp;
-  G('sum-sales-total').textContent=fmt(Math.round(netSales))+' ج'+(totalDiscounts>0?' (خصم '+fmt(Math.round(totalDiscounts))+')':'');
+  G('sum-sales-total').textContent=fmt(Math.round(netSales))+' ج'+(totalReturns>0?' (مرتجعات '+fmt(Math.round(totalReturns))+')':'')+(totalDiscounts>0?' (خصم '+fmt(Math.round(totalDiscounts))+')':'');
   G('sum-exp-total').textContent=fmt(Math.round(totalExp))+' ج';
   G('sum-profit').textContent=fmt(Math.round(profit))+' ج';
   G('sum-profit').style.color=profit>=0?'var(--gr)':'var(--rd)';
@@ -6760,8 +7403,9 @@ function sumRender(){
         '<tbody>'+allChq.map(function(c){
           var isOverdue=c.status==='pending'&&c.due<=today;
           var isPending=c.status==='pending';
-          var bg=isOverdue?'#fdecea':isPending?'#fff8e8':'#f0fff4';
-          var statusLabel=isOverdue?'⚠️ متأخر':isPending?'⏳ منتظر':'✅ محصل';
+          var isBnc=c.status==='bounced';
+          var bg=isBnc?'#fbe3e3':isOverdue?'#fdecea':isPending?'#fff8e8':'#f0fff4';
+          var statusLabel=isBnc?'❌ مرتد':isOverdue?'⚠️ متأخر':isPending?'⏳ منتظر':'✅ محصل';
           return '<tr style="background:'+bg+'">'+
             '<td style="padding:5px 8px;font-weight:700;border:1px solid #e0d5c5">'+esc(c.cnm)+'</td>'+
             '<td style="padding:5px 8px;font-weight:900;color:#c0392b;border:1px solid #e0d5c5;text-align:center">'+fmt(c.amt)+' ج</td>'+
@@ -6814,8 +7458,9 @@ var CB_M={
 };
 var CB_T={in:'وارد',out:'صادر',tr:'تحويل'};
 // تسجيل تلقائي في اليومية
-function cbAutoLog(amt,meth,desc,dt,isOut,refId){
+function cbAutoLog(amt,meth,desc,dt,isOut,refId,fixedId){
   if(!amt||amt<=0)return;
+  if(fixedId&&(db.cashbook||[]).some(function(e){return e.id===fixedId;}))return fixedId; // متسجلة قبل كده
   var methMap={
     'كاش':'cash',
     'فودافون محمد':'voda1','فودافون كاش':'voda1','فودافون':'voda1',
@@ -6829,13 +7474,14 @@ function cbAutoLog(amt,meth,desc,dt,isOut,refId){
   var m=methMap[meth]||meth||'cash';
   if(!db.cashbook)db.cashbook=[];
   var entry={
-    id:'cba'+Date.now()+Math.floor(Math.random()*1000),
+    id:fixedId||('cba'+Date.now()+Math.floor(Math.random()*1000)),
     dt:dt||todayLocal(),
     tp:isOut?'out':'in',m:m,m2:'',amt:amt,
     desc:desc,auto:true
   };
   if(refId)entry.ref=refId;
   db.cashbook.push(entry);
+  return entry.id;
 }
 function cbInit(){
   var t=todayLocal();
@@ -7169,6 +7815,13 @@ function _beep(){
   try{var ac=new(window.AudioContext||window.webkitAudioContext)();var o=ac.createOscillator();var g=ac.createGain();o.connect(g);g.connect(ac.destination);o.frequency.value=880;g.gain.value=0.15;o.start();o.stop(ac.currentTime+0.1);setTimeout(function(){var o2=ac.createOscillator();var g2=ac.createGain();o2.connect(g2);g2.connect(ac.destination);o2.frequency.value=1320;g2.gain.value=0.12;o2.start();o2.stop(ac.currentTime+0.12);},120);}catch(e){}
   if(navigator.vibrate)try{navigator.vibrate([60,40,60]);}catch(e){}
 }
+// رقم ثابت لحضور العامل في اليوم — لو اتسجل من جهازين يتحسب مرة واحدة
+// (setN بيزيد مع كل تصفية — ولو الرقم ده اتمسح قبل كده بنزوّد عليه حاجة عشان الحضور الجديد مايتمسحش)
+function _wrAttId(w,dt){
+  var id='wa'+w.id+'_'+dt+'_'+(w.setN||0);
+  if((db.deleted||[]).some(function(d){return d&&d.id===id;}))id+='_r'+Date.now().toString(36);
+  return id;
+}
 function wrLog(){
   var wid=G('wr-sel').value;if(!wid)return showAl('wr-al2','اختر عامل',false);
   var w=(db.workers||[]).find(function(x){return x.id===wid;});if(!w)return;
@@ -7187,7 +7840,7 @@ function wrLog(){
   }
   var note=(G('wr-note').value||'').trim();
   if(!w.logs)w.logs=[];
-  var logId='wl'+Date.now();
+  var logId=(tp==='att')?_wrAttId(w,dt):('wl'+Date.now());
   w.logs.push({id:logId,dt:dt,tp:tp,amt:amt,note:note});
   if(tp==='pay'||tp==='adv'){
     cbAutoLog(amt,'cash',(tp==='pay'?'دفعة عامل: ':'سلفة عامل: ')+w.nm,dt,true,logId);
@@ -7317,6 +7970,7 @@ function wrSettleAmount(wid){
   allLogsToDelete.forEach(function(l){trackDelete(l.id);});
   // ✅ إصلاح: حركات اليومية بتفضل زي ما هي — دي فلوس خرجت من الخزنة فعلاً والتصفية بتصفّي دفتر العامل بس
   w.logs=(w.logs||[]).filter(function(l){return l.dt>weStr;});
+  w.setN=(w.setN||0)+1;w.mt=new Date().toISOString(); // تصفية جديدة → أرقام حضور جديدة
   // رحّل الصافي للأسبوع الجاي
   if(netAfter<-0.5){
     w.logs.push({id:'wl'+Date.now()+Math.floor(Math.random()*1000),dt:dt,tp:'adv',amt:Math.round(-netAfter),note:'دين مرحّل من الأسبوع السابق'});
@@ -7370,6 +8024,7 @@ function wrClearWeek(wid){
   allLogsToDelete.forEach(function(l){trackDelete(l.id);});
   // ✅ إصلاح: حركات اليومية بتفضل زي ما هي — دي فلوس خرجت من الخزنة فعلاً والتصفية بتصفّي دفتر العامل بس
   w.logs=(w.logs||[]).filter(function(l){return l.dt>weStr;});
+  w.setN=(w.setN||0)+1;w.mt=new Date().toISOString(); // تصفية جديدة → أرقام حضور جديدة
   // لو سلفة زيادة — انقلها
   if(remaining<0){
     w.logs.push({id:'wl'+Date.now(),dt:fmtDateLocal(now),tp:'adv',amt:Math.abs(remaining),note:'سلفة مرحلة من الأسبوع السابق'});
@@ -7386,7 +8041,7 @@ function wrAttAll(){
     var already=(w.logs||[]).some(function(l){return l.tp==='att'&&l.dt===attDate;});
     if(already)return;
     if(!w.logs)w.logs=[];
-    w.logs.push({id:'wl'+Date.now()+Math.random(),dt:attDate,tp:'att',amt:w.daily||0,note:''});
+    w.logs.push({id:_wrAttId(w,attDate),dt:attDate,tp:'att',amt:w.daily||0,note:''});
     count++;
   });
   if(count===0){showAl('wr-al2','كل العمال مسجلين حضور يوم '+_dayName(attDate)+' ('+attDate+') بالفعل',false);return;}
@@ -7399,7 +8054,7 @@ function wrQuickAtt(wid){
   var already=(w.logs||[]).some(function(l){return l.tp==='att'&&l.dt===attDate;});
   if(already){showAl('wr-al2','⚠️ '+w.nm+' مسجل حضور يوم '+_dayName(attDate)+' ('+attDate+') بالفعل',false);return;}
   if(!w.logs)w.logs=[];
-  w.logs.push({id:'wl'+Date.now(),dt:attDate,tp:'att',amt:w.daily||0,note:''});
+  w.logs.push({id:_wrAttId(w,attDate),dt:attDate,tp:'att',amt:w.daily||0,note:''});
   dbSave();wrRender();
   _beep();showAl('wr-al2','✅ تم تسجيل حضور '+w.nm+' يوم '+_dayName(attDate),true);
 }
@@ -7696,7 +8351,7 @@ function chqBounce(chqId){
   var wasCollected=(chq.status==='collected');
   chq.status='bounced';
   chq.bouncedDt=todayLocal();
-  chq.mt=new Date().toISOString();
+  chq.mt=new Date().toISOString();chq.smt=chq.mt;
   // لو كان متحصّل: شيل حركة اليومية (الفلوس مدخلتش فعلاً)
   if(wasCollected){
     db.cashbook=(db.cashbook||[]).filter(function(e){return e.ref!==chqId;});
@@ -7706,10 +8361,11 @@ function chqBounce(chqId){
   if(chq.cid&&chq.payId){
     var cu=db.custs.find(function(c){return c.id===chq.cid;});
     if(cu&&cu.payments){
-      var pp=cu.payments.find(function(p){return p.id===chq.payId;});
+      var pp=cu.payments.find(function(p){return p.id===chq.payId||(chq.saleId&&_isSalePay(p,chq.saleId));});
       if(pp){
-        try{trackDelete(chq.payId);}catch(e){}
-        cu.payments=cu.payments.filter(function(p){return p.id!==chq.payId;});
+        chq.bouncedPay={amt:pp.amt,method:pp.method||'شيك',note:pp.note||'',dt:pp.dt||chq.dt};
+        try{trackDelete(pp.id);}catch(e){}
+        cu.payments=cu.payments.filter(function(p){return p!==pp;});
       }
       cu.debt=cuCalcDebt(cu);cu.mt=new Date().toISOString();
     }
@@ -7725,9 +8381,28 @@ function chqUnbounce(chqId){
   if(typeof isAdmin==='function'&&!isAdmin())return alert('🔒 الصلاحية دي للمدير فقط');
   var chq=(db.cheques||[]).find(function(x){return x.id===chqId;});
   if(!chq||chq.status!=='bounced')return;
-  if(!confirm('🔄 رجّع الشيك لحالة "معلّق"؟\n\n(استخدمها لو العميل سدّده أو اتحل الموضوع)'))return;
-  chq.status='pending';chq.bouncedDt='';chq.mt=new Date().toISOString();
+  if(!confirm('🔄 رجّع الشيك لحالة «معلّق»؟\n\n• الشيك هيرجع يستنى التحصيل\n• المبلغ ('+fmt(chq.amt)+' ج) هيرجع يتحسب دفعة للعميل\n\n⚠️ لو العميل دفع كاش بدل الشيك: متلغيش الارتداد — سجّل دفعة كاش عادي من حساب العميل.'))return;
+  var _nowU=new Date().toISOString();
+  chq.status='pending';chq.bouncedDt='';chq.mt=_nowU;chq.smt=_nowU;
+  // رجّع الدفعة اللي الارتداد شالها (بـid جديد عشان علامة حذف القديمة ماتمسحهاش)
+  if(chq.cid){
+    var _cuU=db.custs.find(function(c){return c.id===chq.cid;});
+    var _sxU=chq.saleId?db.sales.find(function(x){return x.id===chq.saleId;}):null;
+    // لو البيعة اتحولت لطريقة دفع تانية بعد الارتداد → دفعتها متسجلة خلاص، مانرجعش دفعة الشيك
+    if(_cuU&&(!chq.saleId||(_sxU&&_sxU.pay==='شيك'))){
+      if(!_cuU.payments)_cuU.payments=[];
+      var _bp=chq.bouncedPay||{amt:chq.amt,method:'شيك',note:'شيك',dt:chq.dt};
+      var _nid=(chq.saleId?('px'+chq.saleId+'~'):'pq')+Date.now().toString(36);
+      var _np={id:_nid,dt:_bp.dt||chq.dt,amt:(_bp.amt!==undefined?_bp.amt:chq.amt)||0,type:'pay',method:_bp.method||'شيك',note:_bp.note||'شيك'};
+      if(chq.saleId)_np.sx=chq.saleId;
+      if(_np.amt>0){_cuU.payments.push(_np);chq.payId=_nid;if(_sxU){_sxU.pxId=_nid;_sxU.mt=_nowU;}}
+      _cuU.debt=cuCalcDebt(_cuU);_cuU.mt=_nowU;
+    }
+    delete chq.bouncedPay;
+  }
   dbSave();chqRenderCusts();
+  try{cuRender();}catch(e){}
+  try{if(typeof _cuId!=='undefined'&&_cuId===chq.cid)cuOpen(_cuId);}catch(e){}
   try{auditLog('إلغاء ارتداد شيك',chq.cnm+' — '+fmt(chq.amt)+' ج');}catch(e){}
   showAl('cu-al','✅ رجع الشيك لحالة معلّق',true);
 }
@@ -7735,10 +8410,20 @@ function chqCollect(chqId){
   if(!db.cheques)return;
   var chq=db.cheques.find(function(x){return x.id===chqId;});
   if(!chq)return;
+  // 🛡️ الشيك اتحصّل أو ارتد قبل كده (يمكن من جهاز تاني والقايمة لسه قديمة) — متحصّلوش تاني
+  if(chq.status!=='pending'){
+    try{chqRenderCusts();}catch(e){}
+    return alert(chq.status==='collected'
+      ?('✅ الشيك ده اتحصّل بالفعل'+(chq.collectedDt?' يوم '+chq.collectedDt:'')+' — يمكن من جهاز تاني.\n\nمفيش حاجة اتسجلت تاني.')
+      :'❌ الشيك ده متعلّم «مرتد» — ألغي الارتداد الأول لو عايز تحصّله.');
+  }
+  var _nowC=new Date().toISOString();
   chq.status='collected';
   chq.collectedDt=todayLocal();
-  chq.mt=new Date().toISOString(); // ختم زمني — تحصيل شيك
-  cbAutoLog(chq.amt,'check','تحصيل شيك: '+chq.cnm+(chq.holder&&chq.holder!==chq.cnm?' (صاحب الشيك: '+chq.holder+')':'')+(chq.note?' — '+chq.note:''),chq.collectedDt,false,chqId);
+  chq.colN=(chq.colN||0)+1;
+  chq.mt=_nowC;chq.smt=_nowC; // ختم زمني — تحصيل شيك (والحالة لوحدها)
+  // رقم ثابت لحركة التحصيل: لو جهازين حصّلوا نفس الشيك في نفس اللحظة تتحسب مرة واحدة بس
+  cbAutoLog(chq.amt,'check','تحصيل شيك: '+chq.cnm+(chq.holder&&chq.holder!==chq.cnm?' (صاحب الشيك: '+chq.holder+')':'')+(chq.note?' — '+chq.note:''),chq.collectedDt,false,chqId,'cbq'+chqId+'_'+chq.colN);
   dbSave();chqRenderCusts();
   _beep();showAl('cu-al','✅ تم تحصيل شيك '+fmt(chq.amt)+' ج',true);
 }
@@ -7757,7 +8442,7 @@ function chqDel(chqId){
         // دور على الدفعة اللي بنفس المبلغ والتاريخ وطريقة الدفع شيك
         var found=false,foundPid=null;
         c.payments=c.payments.filter(function(p){
-          if(!found&&p.type==='pay'&&((chq.payId&&p.id===chq.payId)||(!chq.payId&&p.method==='شيك'&&p.amt===chq.amt&&p.dt===chq.dt))){found=true;foundPid=p.id;return false;}
+          if(!found&&p.type==='pay'&&((chq.payId&&p.id===chq.payId)||(chq.saleId&&_isSalePay(p,chq.saleId))||(!chq.payId&&p.method==='شيك'&&p.amt===chq.amt&&p.dt===chq.dt))){found=true;foundPid=p.id;return false;}
           return true;
         });
         if(foundPid)trackDelete(foundPid);
@@ -7779,12 +8464,13 @@ function chqRenderCusts(){
     if(ab!==bb)return ab-bb;
     return String(a.due||a.dt).localeCompare(String(b.due||b.dt));
   });
-  if(!pending.length){section.style.display='none';return;}
+  if(!pending.length){section.style.display='none';var _b0=G('cu-chq-body');if(_b0)_b0.innerHTML='';return;}
   section.style.display='block';
   var today=todayLocal();
-  var total=pending.reduce(function(s,c){return s+c.amt;},0);
-  var cnt=G('cu-chq-count');if(cnt)cnt.textContent=pending.length;
-  var sum=G('cu-chq-sum');if(sum)sum.textContent=fmt(Math.round(total))+' ج';
+  var _pOnly=pending.filter(function(c){return c.status==='pending';}),_bOnly=pending.filter(function(c){return c.status==='bounced';});
+  var total=_pOnly.reduce(function(s,c){return s+c.amt;},0);
+  var cnt=G('cu-chq-count');if(cnt)cnt.textContent=_pOnly.length;
+  var sum=G('cu-chq-sum');if(sum)sum.textContent=fmt(Math.round(total))+' ج'+(_bOnly.length?(' + ❌ '+_bOnly.length+' مرتد ('+fmt(Math.round(_bOnly.reduce(function(s,c){return s+c.amt;},0)))+' ج)'):'');
   var body=G('cu-chq-body');if(!body)return;
   pending.sort(function(a,b){return a.due<b.due?-1:1;});
   body.innerHTML=pending.map(function(c){
@@ -7888,7 +8574,7 @@ function exportXL(type){
   }else if(type==='sales'){
     sheetName='المبيعات';
     data=db.sales.map(function(s){
-      var totalM3=(s.lines||[]).reduce(function(sm,l){var inv=_invMap()[l.invId];return sm+(inv?inv.net:0);},0);
+      var totalM3=(s.lines||[]).reduce(function(sm,l){var inv=_lineData(l);return sm+(inv?inv.net:0);},0);
       return {'التاريخ':s.dt,'العميل':s.cnm||'','عدد الربط':(s.lines||[]).length,'م³':Math.round(totalM3*1000)/1000,'السعر':s.price||0,'طريقة الدفع':s.pay||''};
     });
   }else if(type==='custs'){
@@ -7896,7 +8582,7 @@ function exportXL(type){
     data=db.custs.map(function(c){return {'العميل':c.nm,'التليفون':c.ph||'','العنوان':c.ad||'','إجمالي المشتريات':c.total||0,'المديونية':cuCalcDebt(c)};});
   }else if(type==='cheques'){
     sheetName='الشيكات';
-    data=(db.cheques||[]).map(function(c){return {'العميل':c.cnm,'المبلغ':c.amt,'تاريخ الاستلام':c.dt,'تاريخ الاستحقاق':c.due,'الحالة':c.status==='pending'?'منتظر':'محصل','ملاحظة':c.note||''};});
+    data=(db.cheques||[]).map(function(c){return {'العميل':c.cnm,'المبلغ':c.amt,'تاريخ الاستلام':c.dt,'تاريخ الاستحقاق':c.due,'الحالة':c.status==='pending'?'منتظر':(c.status==='bounced'?'مرتد':'محصل'),'ملاحظة':c.note||''};});
   }else if(type==='cashbook'){
     sheetName='اليومية';
     var methNames={'cash':'كاش','voda1':'فودافون محمد','voda2':'فودافون إبراهيم','voda3':'فودافون طارق','insta1':'إنستا باي محمد','insta2':'إنستا باي إبراهيم','bank1':'بنك تنمية الصادرات','bank2':'بنك سايب','wallet':'محفظة بنك القاهرة','check':'شيك'};
@@ -8220,40 +8906,59 @@ async function setChangePass(){
     var msg='🧹 تنظيف النسخ التلقائية الأقدم من '+days+' يوم؟\n\n';
     msg+='• بياناتك الحالية مش هتتمس إطلاقاً\n';
     msg+='• آلة الزمن هتفضل شغالة وترجّعك '+days+' يوم ورا\n';
-    msg+='• المساحة على السيرفر هتقل بشكل كبير\n\n';
+    msg+='• هيتمسح على دفعات صغيرة (أضمن من دفعة واحدة كبيرة)\n\n';
     msg+='(نسختك اليومية على اللابتوب هي الحماية طويلة المدى)';
     if(!confirm(msg))return;
     var sess=authGet();if(!sess)return alert('مفيش جلسة — سجّل دخول');
     var btn=document.getElementById('clean-hist-btn');
-    if(btn){btn.disabled=true;btn.textContent='⏳ جاري التنظيف...';}
+    if(btn){btn.disabled=true;}
     var cutoff=new Date(Date.now()-days*86400000).toISOString();
-    // نجرب أسماء أعمدة التاريخ الشائعة (الجدول ممكن يكون created_at أو saved_at أو ts)
-    var cols=['saved_at','created_at','ts','at','inserted_at'];
-    var lastErr='';
-    function tryCol(i){
-      if(i>=cols.length){
+    var BATCH=40,totalDel=0,rounds=0,MAXROUNDS=60;
+    function step(){
+      rounds++;
+      if(rounds>MAXROUNDS){
         if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
-        return alert('⚠️ تعذر التنظيف.\n\nتفاصيل الخطأ:\n'+lastErr+'\n\nابعت الرسالة دي عشان نحل المشكلة.');
+        return alert((totalDel>0?'✅ اتمسح '+totalDel+' نسخة قديمة.\n\n':'')+'⚠️ فيه نسخ قديمة كتير لسه — دوس الزرار تاني عشان يكمّل التنظيف على دفعات.');
       }
-      fetch(SUPA_URL+'/rest/v1/woodstore_history?'+cols[i]+'=lt.'+encodeURIComponent(cutoff),{
-        method:'DELETE',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+sess.access_token,'Prefer':'return=minimal'}
-      }).then(function(r){
-        if(r.ok){
+      if(btn)btn.textContent='⏳ جاري التنظيف... ('+totalDel+')';
+      // 1) هات أقدم دفعة (id بس، سريع)
+      fetch(SUPA_URL+'/rest/v1/woodstore_history?select=id&saved_at=lt.'+encodeURIComponent(cutoff)+'&order=saved_at.asc&limit='+BATCH,{
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+sess.access_token}
+      }).then(function(r){return r.json().then(function(j){return {ok:r.ok,status:r.status,body:j};});})
+      .then(function(res){
+        if(!res.ok)throw new Error('قراءة الدفعة فشلت ('+res.status+'): '+JSON.stringify(res.body).slice(0,150));
+        var ids=(res.body||[]).map(function(x){return x.id;});
+        if(!ids.length){
           if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
-          try{auditLog('تنظيف النسخ التلقائية','أقدم من '+days+' يوم');}catch(e){}
-          return alert('✅ اتنضّفت المساحة!\n\nادخل لوحة Supabase بعد دقيقة وشوف "Database size" — هتلاقيه قلّ.\n\nآلة الزمن لسه شغالة وبترجّعك '+days+' يوم ورا.');
+          try{auditLog('تنظيف النسخ التلقائية','أقدم من '+days+' يوم — '+totalDel+' نسخة');}catch(e){}
+          return alert(totalDel>0
+            ?'✅ اتنضّفت المساحة! اتمسح '+totalDel+' نسخة قديمة.\n\nادخل لوحة Supabase بعد دقيقة وشوف "Database size".'
+            :'✅ مفيش نسخ قديمة أصلاً — المساحة نضيفة.');
         }
-        return r.text().then(function(t){
-          lastErr=(lastErr?lastErr+'\n':'')+'['+cols[i]+'] '+r.status+': '+String(t).slice(0,160);
-          tryCol(i+1);
+        // 2) امسح الدفعة دي بالـid (صغيرة وسريعة، مش هتعمل timeout)
+        var idList=ids.join(',');
+        return fetch(SUPA_URL+'/rest/v1/woodstore_history?select=id&id=in.('+idList+')',{
+          method:'DELETE',
+          headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+sess.access_token,'Prefer':'return=representation'}
+        }).then(function(r2){
+          if(!r2.ok)return r2.text().then(function(t){throw new Error('حذف الدفعة فشل ('+r2.status+'): '+String(t).slice(0,150));});
+          return r2.json().then(function(deleted){
+            var n=(deleted||[]).length;
+            if(n===0){
+              // الطلب نجح لكن ولا صف اتمسح = صلاحية الحذف (RLS) ناقصة على الجدول
+              if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
+              return alert('⚠️ السيرفر رفض المسح (ولا صف اتمسح).\n\nالسبب: جدول النسخ التلقائية مفيهوش صلاحية حذف.\n\nالحل: في Supabase → SQL Editor شغّل:\n\ncreate policy "hist_delete" on public.woodstore_history for delete to authenticated using (true);\n\nوبعدها دوس الزرار تاني.');
+            }
+            totalDel+=n;
+            setTimeout(step,150);
+          });
         });
       }).catch(function(e){
-        lastErr=(lastErr?lastErr+'\n':'')+'['+cols[i]+'] '+(e&&e.message?e.message:'شبكة');
-        tryCol(i+1);
+        if(btn){btn.disabled=false;btn.textContent='🧹 نضّف المساحة دلوقتي';}
+        alert('⚠️ تعذر التنظيف بعد مسح '+totalDel+' نسخة.\n\nتفاصيل: '+(e&&e.message?e.message:'خطأ غير معروف')+'\n\nابعت الرسالة دي عشان نحل المشكلة، أو دوس الزرار تاني يكمّل من نفس النقطة.');
       });
     }
-    tryCol(0);
+    step();
   };
   window._attachCleanCard=function(){
     try{
@@ -8311,6 +9016,91 @@ async function setChangePass(){
 
 try{fsInit();}catch(e){}
 try{sbMoreInit();}catch(e){}
+
+// 🔒 قفل التابين: تاب واحد بس شغال على نفس الجهاز — أي تاب جديد بيوقف القديم (بعد ما يخلّص الحفظ اللي عليه)
+(function(){
+  var _myTab='t'+Date.now()+Math.random().toString(36).slice(2,7);
+  window._tabBlocked=false;
+  function _block(){
+    if(window._tabBlocked)return;
+    // خلّص أي حفظ مستني قبل الوقوف
+    try{if(window._dbTimer){clearTimeout(window._dbTimer);window._dbTimer=null;dbSaveRemote();}}catch(e){}
+    window._tabBlocked=true;
+    try{if(window._pollTimer){clearInterval(window._pollTimer);window._pollTimer=null;}}catch(e){}
+    var ov=document.getElementById('tab-lock-ov');
+    if(!ov){
+      ov=document.createElement('div');ov.id='tab-lock-ov';
+      ov.style.cssText='position:fixed;inset:0;z-index:999999;background:rgba(30,20,10,0.92);display:flex;align-items:center;justify-content:center;padding:16px;font-family:Cairo,sans-serif;direction:rtl';
+      ov.innerHTML='<div style="background:white;border-radius:14px;padding:24px 20px;max-width:360px;width:100%;text-align:center">'
+        +'<div style="font-size:2.2rem;margin-bottom:6px">🗂️</div>'
+        +'<div style="font-weight:900;font-size:1.05rem;color:#3d2b1f;margin-bottom:8px">البرنامج مفتوح في تاب تاني</div>'
+        +'<div style="font-size:0.85rem;color:#666;margin-bottom:16px;line-height:1.7">التاب ده وقف عشان البيانات متتلخبطش.<br>شغلك محفوظ — مفيش حاجة اتمسحت.</div>'
+        +'<button id="tab-lock-btn" style="background:#2a7d4f;color:white;border:none;border-radius:10px;padding:11px 22px;font-family:Cairo,sans-serif;font-size:0.95rem;font-weight:700;cursor:pointer">✅ كمّل هنا</button>'
+        +'</div>';
+      document.body.appendChild(ov);
+      document.getElementById('tab-lock-btn').onclick=function(){
+        // إعادة تحميل = آخر بيانات + التاب ده ياخد القفل والتاني يقف
+        this.disabled=true;this.textContent='⏳ جاري الفتح...';
+        setTimeout(function(){location.reload();},window._uploading?1500:200);
+      };
+    }
+    ov.style.display='flex';
+  }
+  function _claim(){try{localStorage.setItem('nesr_tab_claim',_myTab+'|'+Date.now());}catch(e){}}
+  window.addEventListener('storage',function(e){
+    if(e.key!=='nesr_tab_claim'||!e.newValue)return;
+    if(e.newValue.split('|')[0]!==_myTab)_block();
+  });
+  _claim();
+})();
+
+// 🔢 الأرقام العربي (١٢٣) والفارسي (۱۲۳) → أرقام عادية في أي خانة — عشان كيبورد الموبايل
+// (البرنامج كان بيقرا "١٦٠٠٠" على إنها صفر)
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(!t||(t.tagName!=='INPUT'&&t.tagName!=='TEXTAREA'))return;
+  if(t.type==='file'||t.type==='checkbox'||t.type==='radio'||t.type==='date')return;
+  var v=t.value;
+  if(!v||!/[٠-٩۰-۹٫٬]/.test(v))return;
+  var nv=v.replace(/[٠-٩]/g,function(d){return String(d.charCodeAt(0)-1632);})
+          .replace(/[۰-۹]/g,function(d){return String(d.charCodeAt(0)-1776);})
+          .replace(/٫/g,'.').replace(/٬/g,'');
+  if(nv===v)return;
+  var pos=null;try{pos=t.selectionStart;}catch(_){}
+  t.value=nv;
+  try{if(pos!==null)t.setSelectionRange(Math.min(pos,nv.length),Math.min(pos,nv.length));}catch(_){}
+},true);
+
+// 🆕 فيه نسخة أحدث على GitHub؟ → رسالة "اضغط للتحديث" (عشان الجهازين يبقوا على نفس النسخة)
+function _verCmp(a,b){
+  var x=String(a).replace(/^v/,'').split('.').map(Number),y=String(b).replace(/^v/,'').split('.').map(Number);
+  for(var i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)-(y[i]||0);}
+  return 0;
+}
+function _checkNewVersion(){
+  try{
+    if(!/^https?:$/.test(location.protocol))return;
+    fetch(location.pathname,{cache:'no-cache'}).then(function(r){return r.ok?r.text():'';}).then(function(t){
+      var m=t&&t.match(/<!--\s*(v\d+\.\d+\.\d+)/);
+      if(!m||_verCmp(m[1],APP_VER)<=0)return;
+      var bn=document.getElementById('ver-banner');
+      if(!bn){
+        bn=document.createElement('div');bn.id='ver-banner';
+        bn.style.cssText='position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:99990;background:#1f3d2b;color:#fff;padding:11px 18px;border-radius:12px;font-family:Cairo,sans-serif;font-size:0.88rem;font-weight:700;box-shadow:0 4px 18px rgba(0,0,0,.28);cursor:pointer;direction:rtl;max-width:92vw;text-align:center';
+        document.body.appendChild(bn);
+      }
+      bn.textContent='🆕 فيه نسخة جديدة ('+m[1]+') — اضغط هنا للتحديث';
+      bn.onclick=function(){
+        bn.textContent='⏳ جاري التحديث...';
+        // خلّص أي حفظ مستني الأول — مفيش حاجة تضيع
+        try{if(window._dbTimer){clearTimeout(window._dbTimer);window._dbTimer=null;dbSaveRemote();}}catch(e){}
+        setTimeout(function(){location.reload();},window._uploading?2000:400);
+      };
+    }).catch(function(){});
+  }catch(e){}
+}
+setTimeout(_checkNewVersion,20000);
+setInterval(_checkNewVersion,15*60*1000);
 </script>
 
 
